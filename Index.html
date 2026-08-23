@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Zeitung Austragen - Raunheim</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    body { margin: 0; padding: 0; font-family: sans-serif; display: flex; flex-direction: column; height: 100vh; }
+    #info-box { background: #1e293b; color: white; padding: 15px; text-align: center; z-index: 1000; }
+    #next-step { font-size: 1.1rem; font-weight: bold; margin-bottom: 10px; color: #facc15; }
+    #confirm-btn { background: #16a34a; color: white; border: none; padding: 14px 20px; font-size: 1rem; border-radius: 8px; width: 100%; max-width: 300px; font-weight: bold; }
+    #confirm-btn:active { background: #15803d; }
+    #map { flex: 1; width: 100%; }
+  </style>
+</head>
+<body>
+
+  <div id="info-box">
+    <div id="next-step">Klicke unten zum Starten</div>
+    <button id="confirm-btn" onclick="nextWaypoint()">Route Starten / Weiter ➔</button>
+  </div>
+
+  <div id="map"></div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    // Echte Raunheim-Koordinaten für deine Route
+    const waypoints = [
+      { name: "Start: Ringstraße 57", lat: 50.0125, lng: 8.4550 },
+      { name: "1. Ringstraße (56–70)", lat: 50.0128, lng: 8.4555 },
+      { name: "2. Oderstraße (1–73)", lat: 50.0135, lng: 8.4545 },
+      { name: "3. Moselstraße (1-11, 13-14, 18-22)", lat: 50.0142, lng: 8.4558 },
+      { name: "4. Aussiger Straße (1-18, 20-22)", lat: 50.0148, lng: 8.4565 },
+      { name: "5. Jakobstraße (48–52)", lat: 50.0140, lng: 8.4572 },
+      { name: "6. Ringstraße (72–122)", lat: 50.0130, lng: 8.4568 },
+      { name: "Ziel erreicht! Wieder Zuhause.", lat: 50.0125, lng: 8.4550 }
+    ];
+
+    let currentStep = -1;
+    let map, userMarker, targetMarker;
+    let speechSynth = window.speechSynthesis;
+
+    function initMap() {
+      // Karte auf Raunheim zentrieren
+      map = L.map('map').setView([50.0130, 8.4555], 17);
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap'
+      }).addTo(map);
+
+      startGPS();
+    }
+
+    function startGPS() {
+      if ("geolocation" in navigator) {
+        // High-Accuracy GPS erzwingen
+        navigator.geolocation.watchPosition(
+          (pos) => {
+            const lat = pos.coords.latitude;
+            const lng = pos.coords.longitude;
+
+            if (!userMarker) {
+              userMarker = L.circleMarker([lat, lng], { color: '#3b82f6', fillColor: '#60a5fa', fillOpacity: 0.9, radius: 10 }).addTo(map);
+            } else {
+              userMarker.setLatLng([lat, lng]);
+            }
+          },
+          (err) => alert("GPS-Fehler: Bitte Standortfreigabe prüfen."),
+          { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        );
+      }
+    }
+
+    function speak(text) {
+      if (speechSynth) {
+        speechSynth.cancel(); // Vorherige Ansagen stoppen
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'de-DE';
+        speechSynth.speak(utterance);
+      }
+    }
+
+    function nextWaypoint() {
+      if (currentStep < waypoints.length - 1) {
+        currentStep++;
+        const point = waypoints[currentStep];
+
+        document.getElementById('next-step').innerText = point.name;
+        speak(point.name);
+
+        if (targetMarker) map.removeLayer(targetMarker);
+        targetMarker = L.marker([point.lat, point.lng]).addTo(map);
+
+        map.panTo([point.lat, point.lng]);
+      }
+    }
+
+    window.onload = initMap;
+  </script>
+</body>
+</html>
