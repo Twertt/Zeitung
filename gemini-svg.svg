@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <!-- Hintergrund-Farbverlauf -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%#090d16" stop-color="#090d16"/>
+      <stop offset="100%" stop-color="#1e293b"/>
+    </linearGradient>
+    <!-- Neon-Farbverlauf für den Pin -->
+    <linearGradient id="neonGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4facfe"/>
+      <stop offset="100%" stop-color="#00f2fe"/>
+    </linearGradient>
+    <!-- Schattenwurf -->
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="10" stdDeviation="15" flood-color="#000000" flood-opacity="0.5"/>
+    </filter>
+  </defs>
+
+  <!-- App-Icon Hintergrund mit abgerundeten Ecken (iOS/Android Standard Form) -->
+  <rect width="512" height="512" rx="115" fill="url(#bgGrad)" />
+
+  <!-- Dezente abstrakte Strassenlinien im Hintergrund -->
+  <path d="M 80 150 L 432 150 M 120 280 L 392 280 M 150 410 L 360 410" stroke="rgba(255,255,255,0.06)" stroke-width="12" stroke-linecap="round"/>
+  <path d="M 180 80 L 180 440 M 340 80 L 340 440" stroke="rgba(255,255,255,0.06)" stroke-width="12" stroke-linecap="round"/>
+
+  <!-- Zentraler Standort-Pin (Neon-Design) -->
+  <g filter="url(#shadow)">
+    <!-- Pin-Körper -->
+    <path d="M 256 70 
+             C 185 70, 128 127, 128 198 
+             C 128 295, 256 412, 256 412 
+             C 256 412, 384 295, 384 198 
+             C 384 127, 327 70, 256 70 Z" 
+          fill="url(#neonGrad)"/>
+    <!-- Innerer weißer Kreis des Pins -->
+    <circle cx="256" cy="188" r="48" fill="#090d16"/>
+  </g>
+</svg>
