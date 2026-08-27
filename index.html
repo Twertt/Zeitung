@@ -3,31 +3,42 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Zeitung Austragen - Raunheim Route v12</title>
+  <title>Zeitung Austragen - Raunheim Route v13</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
     body { margin: 0; padding: 0; font-family: sans-serif; display: flex; flex-direction: column; height: 100vh; }
-    #info-box { background: #1e293b; color: white; padding: 15px; text-align: center; z-index: 1000; }
-    #next-step { font-size: 1.2rem; font-weight: bold; margin-bottom: 5px; color: #facc15; }
-    #progress { font-size: 0.85rem; color: #94a3b8; margin-bottom: 12px; }
-    .btn-group { display: flex; gap: 10px; justify-content: center; width: 100%; max-width: 360px; margin: 0 auto; }
-    .nav-btn { flex: 1; padding: 14px 10px; font-size: 1rem; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; color: white; touch-action: manipulation; }
+    #info-box { background: #1e293b; color: white; padding: 12px 15px; text-align: center; z-index: 1000; }
+    #next-step { font-size: 1.2rem; font-weight: bold; margin-bottom: 2px; color: #facc15; }
+    #note-display { font-size: 0.95rem; font-weight: bold; margin-bottom: 8px; min-height: 20px; }
+    #progress { font-size: 0.8rem; color: #94a3b8; margin-bottom: 10px; }
+    .btn-group { display: flex; gap: 10px; justify-content: center; width: 100%; max-width: 360px; margin: 0 auto 8px auto; }
+    .nav-btn { flex: 1; padding: 12px 10px; font-size: 1rem; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; color: white; touch-action: manipulation; }
     #prev-btn { background: #475569; }
     #prev-btn:disabled { opacity: 0.3; cursor: not-allowed; }
     #next-btn { background: #16a34a; }
     #next-btn:disabled { background: #475569; cursor: not-allowed; }
+    .note-actions { display: flex; gap: 5px; justify-content: center; margin-bottom: 4px; flex-wrap: wrap; }
+    .note-btn { background: #334155; color: white; border: 1px solid #475569; border-radius: 6px; padding: 6px 10px; font-size: 0.75rem; cursor: pointer; }
+    .note-btn.active-no { background: #dc2626; border-color: #ef4444; }
+    .note-btn.active-yes { background: #16a34a; border-color: #22c55e; }
     #map { flex: 1; width: 100%; }
-    #reset-btn { background: transparent; color: #64748b; border: none; font-size: 0.75rem; text-decoration: underline; margin-top: 8px; cursor: pointer; }
+    #reset-btn { background: transparent; color: #64748b; border: none; font-size: 0.75rem; text-decoration: underline; margin-top: 4px; cursor: pointer; }
   </style>
 </head>
 <body>
 
   <div id="info-box">
     <div id="next-step">Lade Gebäude-Koordinaten...</div>
+    <div id="note-display"></div>
     <div id="progress">Bitte einen Moment Geduld</div>
     <div class="btn-group">
       <button id="prev-btn" class="nav-btn" type="button" onclick="prevWaypoint()" disabled>⬅ Zurück</button>
       <button id="next-btn" class="nav-btn" type="button" onclick="nextWaypoint()" disabled>Weiter ➔</button>
+    </div>
+    <div class="note-actions">
+      <button class="note-btn" type="button" onclick="setNote('🚫 Will keine Werbung')">🚫 Keine Werbung</button>
+      <button class="note-btn" type="button" onclick="setNote('📬 Möchte Werbung')">📬 Werbung erwünscht</button>
+      <button class="note-btn" type="button" onclick="setNote('')">🗑️ Notiz löschen</button>
     </div>
     <div><button id="reset-btn" type="button" onclick="clearRouteCache()">Daten neu laden</button></div>
   </div>
@@ -39,46 +50,22 @@
     let map, userMarker, targetMarker;
     let waypoints = [];
     let currentStep = 0;
+    let customNotes = {};
 
-    // Exakter gelaufener Lieferplan v12
+    // Exakter gelaufener Lieferplan v13
     const deliveryPlan = [
-      // 1. Start
       { street: "Ringstraße", nums: [57] },
-
-      // 2. Moselstraße 
       { street: "Moselstraße", nums: [5, 3, 9, 7, 13, 18, 16, 14, 12, 10, 20, 22, 11] },
-
-      // 3. Aussiger Straße
       { street: "Aussiger Straße", nums: [22, 20, 18, 16, 14, 12, 10, 8, 6, 4, 2, 1, 3, 5, 7, 9, 11, 13, 15, 17] },
-
-      // 4. Jakobstraße
       { street: "Jakobstraße", nums: [52, 50, 48] },
-
-      // 5. Moselstraße
       { street: "Moselstraße", nums: [2, 4, 6, 8] },
-
-      // 6. Ringstraße
       { street: "Ringstraße", nums: [62, 60, 58, 56, 64, 66, 68, 70, 78, 76, 74, 72] },
-
-      // 7. Moselstraße 1
       { street: "Moselstraße", nums: [1] },
-
-      // 8. Oderstraße
       { street: "Oderstraße", nums: [4, 2] },
-
-      // 9. Ringstraße
       { street: "Ringstraße", nums: [80, 82, 84, 86, 88, 90, 92, 94, 96, 98] },
-
-      // 10. Oderstraße
       { street: "Oderstraße", nums: [39, 41, 43, 45, 47, 49, 51, 53, 57, 59, 37, 35, 33, 31, 29, 27, 25, 23, 21] },
-
-      // 11. Ringstraße
       { street: "Ringstraße", nums: [112, 110, 108, 106, 104, 102, 100] },
-
-      // 12. Oderstraße
       { street: "Oderstraße", nums: [3, 5, 7, 9, 11, 13, 15, 17, 19, 1] },
-
-      // 13. Ringstraße Ziel
       { street: "Ringstraße", nums: [118, 116, 122, 120] },
       { street: "Ringstraße", nums: [57] }
     ];
@@ -92,7 +79,13 @@
     }
 
     async function loadRouteData() {
-      const cached = localStorage.getItem('raunheim_exact_route_v12');
+      // Notizen laden
+      const savedNotes = localStorage.getItem('raunheim_route_notes_v13');
+      if (savedNotes) {
+        customNotes = JSON.parse(savedNotes);
+      }
+
+      const cached = localStorage.getItem('raunheim_exact_route_v13');
       if (cached) {
         waypoints = JSON.parse(cached);
         startApp();
@@ -183,11 +176,12 @@
             ? "Ziel erreicht! Wieder Zuhause." 
             : `${section.street} ${num}`;
 
-          waypoints.push({ name: label, lat: coords.lat, lng: coords.lng });
+          const keyId = `${section.street}_${num}`;
+          waypoints.push({ id: keyId, name: label, lat: coords.lat, lng: coords.lng });
         });
       });
 
-      localStorage.setItem('raunheim_exact_route_v12', JSON.stringify(waypoints));
+      localStorage.setItem('raunheim_exact_route_v13', JSON.stringify(waypoints));
       startApp();
     }
 
@@ -206,15 +200,39 @@
       document.getElementById('next-step').innerText = item.name;
       document.getElementById('progress').innerText = `Station ${currentStep + 1} von ${waypoints.length}`;
       
-      speak(item.name);
+      // Notiz anzeigen
+      const noteEl = document.getElementById('note-display');
+      const currentNote = customNotes[item.id] || "";
+      if (currentNote) {
+        noteEl.innerText = currentNote;
+        noteEl.style.color = currentNote.includes("keine") || currentNote.includes("Keine") ? "#f87171" : "#4ade80";
+      } else {
+        noteEl.innerText = "";
+      }
+
+      speak(item.name + (currentNote ? ". " + currentNote : ""));
 
       if (targetMarker) map.removeLayer(targetMarker);
       
-      targetMarker = L.marker([item.lat, item.lng]).addTo(map).bindPopup(item.name).openPopup();
+      targetMarker = L.marker([item.lat, item.lng]).addTo(map).bindPopup(item.name + (currentNote ? "<br><b>" + currentNote + "</b>" : "")).openPopup();
       map.setView([item.lat, item.lng], 18);
 
       document.getElementById('prev-btn').disabled = (currentStep === 0);
       document.getElementById('next-btn').disabled = (currentStep === waypoints.length - 1);
+    }
+
+    function setNote(noteText) {
+      const item = waypoints[currentStep];
+      if (!item) return;
+
+      if (noteText) {
+        customNotes[item.id] = noteText;
+      } else {
+        delete customNotes[item.id];
+      }
+
+      localStorage.setItem('raunheim_route_notes_v13', JSON.stringify(customNotes));
+      showStep(currentStep);
     }
 
     function nextWaypoint() {
@@ -230,7 +248,8 @@
     }
 
     function clearRouteCache() {
-      localStorage.removeItem('raunheim_exact_route_v12');
+      localStorage.removeItem('raunheim_exact_route_v13');
+      localStorage.removeItem('raunheim_route_notes_v13');
       location.reload();
     }
 
