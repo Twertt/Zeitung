@@ -1,5 +1,5 @@
 {
-  "name": "Zeitung Austragen Raunheim",
+  "name": "Raunheim Route",
   "short_name": "Raunheim Route",
   "description": "Optimierte Zeitungszustellungs-App mit Live-GPS und Pin-Korrektur",
   "start_url": "./index.html",
@@ -10,14 +10,9 @@
   "orientation": "portrait",
   "icons": [
     {
-      "src": "https://raw.githubusercontent.com/twertt/Zeitung/main/icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png"
-    },
-    {
-      "src": "https://raw.githubusercontent.com/twertt/Zeitung/main/icon-512.png",
+      "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIiB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiI+CiAgPHJlY3Qgd2lkdGg9IjUxMiIgaGVpZ2h0PSI1MTIiIHJ4PSIxMTUiIGZpbGw9IiMwOWFkMTYiIC8+CiAgPHBhdGggZD0iTSAyNTYgNzAgQyAxODUgNzAsIDEyOCAxMjcsIDEyOCAxOTggQyAxMjggMjk1LCAyNTYgNDEyLCAyNTYgNDEy IEMgMjU2IDQxMiwgMzg0IDI5NSwgMzg0IDE5OCBDIDM4NCAxMjcsIDMyNyA3MCwgMjU2IDcwIFoiIGZpbGw9IiMwMGYyZmUiLz4KICA8Y2lyY2g+IGN4PSIyNTYiIGN5PSIxODgiIHI9IjQ4IiBmaWxsPSIjMDlhZDE2Ii8+Cjwvc3ZnPg==",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/svg+xml"
     }
   ]
 }
