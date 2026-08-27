@@ -9,7 +9,7 @@
     body { margin: 0; padding: 0; font-family: sans-serif; display: flex; flex-direction: column; height: 100vh; }
     #info-box { background: #1e293b; color: white; padding: 15px; text-align: center; z-index: 1000; }
     #next-step { font-size: 1.1rem; font-weight: bold; margin-bottom: 10px; color: #facc15; }
-    #confirm-btn { background: #16a34a; color: white; border: none; padding: 14px 20px; font-size: 1rem; border-radius: 8px; width: 100%; max-width: 300px; font-weight: bold; }
+    #confirm-btn { background: #16a34a; color: white; border: none; padding: 14px 20px; font-size: 1rem; border-radius: 8px; width: 100%; max-width: 300px; font-weight: bold; cursor: pointer; }
     #confirm-btn:active { background: #15803d; }
     #map { flex: 1; width: 100%; }
   </style>
@@ -25,16 +25,16 @@
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
-    // Echte Raunheim-Koordinaten für deine Route
+    // Exakte Koordinaten für Raunheim
     const waypoints = [
-      { name: "Start: Ringstraße 57", lat: 50.0125, lng: 8.4550 },
-      { name: "1. Ringstraße (56–70)", lat: 50.0128, lng: 8.4555 },
-      { name: "2. Oderstraße (1–73)", lat: 50.0135, lng: 8.4545 },
-      { name: "3. Moselstraße (1-11, 13-14, 18-22)", lat: 50.0142, lng: 8.4558 },
-      { name: "4. Aussiger Straße (1-18, 20-22)", lat: 50.0148, lng: 8.4565 },
-      { name: "5. Jakobstraße (48–52)", lat: 50.0140, lng: 8.4572 },
-      { name: "6. Ringstraße (72–122)", lat: 50.0130, lng: 8.4568 },
-      { name: "Ziel erreicht! Wieder Zuhause.", lat: 50.0125, lng: 8.4550 }
+      { name: "Start: Ringstraße 57", lat: 50.01018, lng: 8.45525 },
+      { name: "1. Ringstraße 56–70", lat: 50.01040, lng: 8.45540 },
+      { name: "2. Oderstraße 1–73", lat: 50.01120, lng: 8.45480 },
+      { name: "3. Moselstraße 1–22", lat: 50.01185, lng: 8.45550 },
+      { name: "4. Aussiger Straße 1–22", lat: 50.01210, lng: 8.45630 },
+      { name: "5. Jakobstraße 48–52", lat: 50.01160, lng: 8.45690 },
+      { name: "6. Ringstraße 72–122", lat: 50.01090, lng: 8.45660 },
+      { name: "Ziel erreicht! Wieder Zuhause.", lat: 50.01018, lng: 8.45525 }
     ];
 
     let currentStep = -1;
@@ -42,8 +42,8 @@
     let speechSynth = window.speechSynthesis;
 
     function initMap() {
-      // Karte auf Raunheim zentrieren
-      map = L.map('map').setView([50.0130, 8.4555], 17);
+      // Zentrierung direkt auf die Ringstraße in Raunheim
+      map = L.map('map').setView([50.0108, 8.4558], 17);
 
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap'
@@ -54,27 +54,31 @@
 
     function startGPS() {
       if ("geolocation" in navigator) {
-        // High-Accuracy GPS erzwingen
         navigator.geolocation.watchPosition(
           (pos) => {
             const lat = pos.coords.latitude;
             const lng = pos.coords.longitude;
 
             if (!userMarker) {
-              userMarker = L.circleMarker([lat, lng], { color: '#3b82f6', fillColor: '#60a5fa', fillOpacity: 0.9, radius: 10 }).addTo(map);
+              userMarker = L.circleMarker([lat, lng], {
+                color: '#1d4ed8',
+                fillColor: '#3b82f6',
+                fillOpacity: 0.9,
+                radius: 9
+              }).addTo(map).bindPopup("Dein Standort");
             } else {
               userMarker.setLatLng([lat, lng]);
             }
           },
-          (err) => alert("GPS-Fehler: Bitte Standortfreigabe prüfen."),
-          { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+          (err) => console.log("GPS Suche..."),
+          { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
         );
       }
     }
 
     function speak(text) {
       if (speechSynth) {
-        speechSynth.cancel(); // Vorherige Ansagen stoppen
+        speechSynth.cancel();
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.lang = 'de-DE';
         speechSynth.speak(utterance);
@@ -90,9 +94,9 @@
         speak(point.name);
 
         if (targetMarker) map.removeLayer(targetMarker);
-        targetMarker = L.marker([point.lat, point.lng]).addTo(map);
+        targetMarker = L.marker([point.lat, point.lng]).addTo(map).bindPopup(point.name).openPopup();
 
-        map.panTo([point.lat, point.lng]);
+        map.setView([point.lat, point.lng], 17);
       }
     }
 
