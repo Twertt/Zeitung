@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Zeitung Austragen - Einzelne Hausnummern</title>
+  <title>Zeitung Austragen - Effizienter Laufweg</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
     body { margin: 0; padding: 0; font-family: sans-serif; display: flex; flex-direction: column; height: 100vh; }
@@ -27,58 +27,62 @@
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
-    // Generiert eine Liste von einzelnen Hausnummern
     function buildList(street, numbers) {
-      return numbers.map(num => ({
-        name: `${street} ${num}`,
-        query: `${street} ${num}, 65479 Raunheim`
-      }));
+      return numbers.map(num => ({ name: `${street} ${num}` }));
     }
 
-    function buildRange(street, start, end, step = 1) {
-      const nums = [];
+    function makeRange(start, end, step = 1) {
+      const res = [];
       if (start <= end) {
-        for (let i = start; i <= end; i += step) nums.push(i);
+        for (let i = start; i <= end; i += step) res.push(i);
       } else {
-        for (let i = start; i >= end; i -= step) nums.push(i);
+        for (let i = start; i >= end; i -= step) res.push(i);
       }
-      return buildList(street, nums);
+      return res;
     }
 
-    // Präzise Liste JEDER einzelnen Hausnummer
-    const waypoints = [
-      { name: "Start: Ringstraße 57", query: "Ringstraße 57, 65479 Raunheim" },
+    // Perfekt geordnete Route: Erst eine Seite hoch, dann die andere zurück
+    const addressList = [
+      { name: "Start: Ringstraße 57" },
 
-      // 1. Ringstraße (56 bis 70 - nur gerade)
-      ...buildRange("Ringstraße", 56, 70, 2),
+      // 1. Ringstraße (56 -> 70, nur gerade)
+      ...buildList("Ringstraße", makeRange(56, 70, 2)),
 
-      // 2. Oderstraße (1 bis 73 - alle Hausnummern)
-      ...buildRange("Oderstraße", 1, 73, 1),
+      // 2. Oderstraße: Erst UNGERADE hoch (1 -> 73), dann GERADE zurück (72 -> 2)
+      ...buildList("Oderstraße", makeRange(1, 73, 2)),
+      ...buildList("Oderstraße", makeRange(72, 2, 2)),
 
-      // 3. Moselstraße (1-11, 13-14, 18-22)
-      ...buildRange("Moselstraße", 1, 11, 1),
-      ...buildRange("Moselstraße", 13, 14, 1),
-      ...buildRange("Moselstraße", 18, 22, 1),
+      // 3. Moselstraße: UNGERADE hin (1 -> 21), GERADE zurück (22 -> 2)
+      ...buildList("Moselstraße", [1, 3, 5, 7, 9, 11, 13, 19, 21]),
+      ...buildList("Moselstraße", [22, 20, 18, 14, 10, 8, 6, 4, 2]),
 
-      // 4. Aussiger Straße (1-18, 20-22)
-      ...buildRange("Aussiger Straße", 1, 18, 1),
-      ...buildRange("Aussiger Straße", 20, 22, 1),
+      // 4. Aussiger Straße: UNGERADE hin (1 -> 21), GERADE zurück (22 -> 2)
+      ...buildList("Aussiger Straße", [1, 3, 5, 7, 9, 11, 13, 15, 17, 21]),
+      ...buildList("Aussiger Straße", [22, 20, 18, 16, 14, 12, 10, 8, 6, 4, 2]),
 
-      // 5. Jakobstraße (48 bis 52)
-      ...buildRange("Jakobstraße", 48, 52, 1),
+      // 5. Jakobstraße (48 -> 52)
+      ...buildList("Jakobstraße", makeRange(48, 52, 1)),
 
-      // 6. Ringstraße (72 bis 122 - nur gerade)
-      ...buildRange("Ringstraße", 72, 122, 2),
+      // 6. Ringstraße (72 -> 122, nur gerade zurück nach Hause)
+      ...buildList("Ringstraße", makeRange(72, 122, 2)),
 
-      { name: "Ziel erreicht! Wieder Zuhause.", query: "Ringstraße 57, 65479 Raunheim" }
+      { name: "Ziel erreicht! Wieder Zuhause." }
     ];
+
+    // Feste Orientierungspunkte für Kartenausschnitte (kein Aufhängen mehr)
+    const areaCoords = {
+      "Ringstraße": [50.0125, 8.4445],
+      "Oderstraße": [50.0131, 8.4431],
+      "Moselstraße": [50.0136, 8.4442],
+      "Aussiger Straße": [50.0139, 8.4451],
+      "Jakobstraße": [50.0136, 8.4459]
+    };
 
     let currentStep = -1;
     let map, userMarker, targetMarker;
     let speechSynth = window.speechSynthesis;
 
     function initMap() {
-      // Zentrierung auf Raunheim West
       map = L.map('map').setView([50.0125, 8.4445], 18);
 
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -106,7 +110,7 @@
               userMarker.setLatLng([lat, lng]);
             }
           },
-          (err) => console.log("GPS Suche..."),
+          (err) => console.log("GPS..."),
           { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
         );
       }
@@ -121,30 +125,21 @@
       }
     }
 
-    async function nextWaypoint() {
-      if (currentStep < waypoints.length - 1) {
+    function nextWaypoint() {
+      if (currentStep < addressList.length - 1) {
         currentStep++;
-        const point = waypoints[currentStep];
+        const item = addressList[currentStep];
 
-        document.getElementById('next-step').innerText = point.name;
-        document.getElementById('progress').innerText = `Haus ${currentStep + 1} von ${waypoints.length}`;
-        speak(point.name);
+        document.getElementById('next-step').innerText = item.name;
+        document.getElementById('progress').innerText = `Haus ${currentStep + 1} von ${addressList.length}`;
+        speak(item.name);
 
-        try {
-          const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(point.query)}`);
-          const data = await res.json();
-
-          if (data && data.length > 0) {
-            const lat = parseFloat(data[0].lat);
-            const lng = parseFloat(data[0].lon);
-
-            if (targetMarker) map.removeLayer(targetMarker);
-            targetMarker = L.marker([lat, lng]).addTo(map).bindPopup(point.name).openPopup();
-
-            map.setView([lat, lng], 18);
+        // Passt den Kartenausschnitt flüssig an die jeweilige Straße an
+        for (let street in areaCoords) {
+          if (item.name.includes(street)) {
+            map.setView(areaCoords[street], 18);
+            break;
           }
-        } catch (e) {
-          console.error("Adresse konnte nicht geladen werden:", point.query);
         }
       }
     }
