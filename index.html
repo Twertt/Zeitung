@@ -25,15 +25,15 @@
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
-    // Exakte Koordinaten für Raunheim
+    // Exakt abgeglichene Daten laut deinem Zustellplan
     const waypoints = [
       { name: "Start: Ringstraße 57", lat: 50.01018, lng: 8.45525 },
-      { name: "1. Ringstraße 56–70", lat: 50.01040, lng: 8.45540 },
-      { name: "2. Oderstraße 1–73", lat: 50.01120, lng: 8.45480 },
-      { name: "3. Moselstraße 1–22", lat: 50.01185, lng: 8.45550 },
-      { name: "4. Aussiger Straße 1–22", lat: 50.01210, lng: 8.45630 },
-      { name: "5. Jakobstraße 48–52", lat: 50.01160, lng: 8.45690 },
-      { name: "6. Ringstraße 72–122", lat: 50.01090, lng: 8.45660 },
+      { name: "1. Ringstraße Hnr. 56 bis 70", lat: 50.01040, lng: 8.45540 },
+      { name: "2. Oderstraße Hnr. 1 bis 73", lat: 50.01120, lng: 8.45480 },
+      { name: "3. Moselstraße Hnr. 1 bis 11, 13 bis 14 und 18 bis 22", lat: 50.01185, lng: 8.45550 },
+      { name: "4. Aussiger Straße Hnr. 1 bis 18 und 20 bis 22", lat: 50.01210, lng: 8.45630 },
+      { name: "5. Jakobstraße Hnr. 48 bis 52", lat: 50.01160, lng: 8.45690 },
+      { name: "6. Ringstraße Hnr. 72 bis 122", lat: 50.01090, lng: 8.45660 },
       { name: "Ziel erreicht! Wieder Zuhause.", lat: 50.01018, lng: 8.45525 }
     ];
 
@@ -42,7 +42,6 @@
     let speechSynth = window.speechSynthesis;
 
     function initMap() {
-      // Zentrierung direkt auf die Ringstraße in Raunheim
       map = L.map('map').setView([50.0108, 8.4558], 17);
 
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
