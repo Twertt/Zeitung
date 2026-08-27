@@ -41,15 +41,7 @@
     let waypoints = [];
     let currentStep = -1;
 
-    // Manuelle Korrekturen für Hausnummern mit ungenauen OpenStreetMap-Daten
-    const manualOverrides = {
-      "oderstr|61": { lat: 50.01785, lng: 8.44310 },
-      "oderstr|63": { lat: 50.01793, lng: 8.44315 },
-      "oderstr|65": { lat: 50.01801, lng: 8.44320 },
-      "oderstr|67": { lat: 50.01809, lng: 8.44325 }
-    };
-
-    // Perfekt optimierter Laufweg ohne Doppler (Start & Ende: Ringstraße 57)
+    // Perfekt optimierter Laufweg (Start & Ziel: Ringstraße 57)
     const deliveryPlan = [
       { street: "Ringstraße", nums: [57] },
       { street: "Ringstraße", nums: makeRange(56, 70, 2) },
@@ -75,18 +67,23 @@
     }
 
     function cleanStreet(str) {
-      return str.toLowerCase().replace(/straße/g, "str").replace(/strasse/g, "str").replace(/\s+/g, "");
+      return str.toLowerCase()
+        .replace(/straße/g, "str")
+        .replace(/strasse/g, "str")
+        .replace(/\./g, "")
+        .replace(/\s+/g, "");
     }
 
     async function loadRouteData() {
-      const cached = localStorage.getItem('raunheim_exact_route_v5');
+      // Version auf v6 aktualisiert, um alte falsche Daten sofort zu überschreiben
+      const cached = localStorage.getItem('raunheim_exact_route_v6');
       if (cached) {
         waypoints = JSON.parse(cached);
         startApp();
         return;
       }
 
-      document.getElementById('next-step').innerText = "Rufe echte Haus-Standorte ab...";
+      document.getElementById('next-step').innerText = "Rufe reale Standorte ab...";
       document.getElementById('progress').innerText = "Verbindung zu OpenStreetMap...";
 
       const overpassQuery = `
@@ -95,6 +92,7 @@
         (
           node["addr:street"]["addr:housenumber"](area.a);
           way["addr:street"]["addr:housenumber"](area.a);
+          relation["addr:street"]["addr:housenumber"](area.a);
         );
         out center;
       `;
@@ -106,14 +104,18 @@
         const osmMap = {};
         data.elements.forEach(el => {
           const st = el.tags?.['addr:street'];
-          const hn = parseInt(el.tags?.['addr:housenumber'], 10);
+          const hnRaw = el.tags?.['addr:housenumber'];
+          const hn = parseInt(hnRaw, 10);
           const lat = el.lat || el.center?.lat;
           const lng = el.lon || el.center?.lon;
 
           if (st && !isNaN(hn) && lat && lng) {
             const key = cleanStreet(st);
             if (!osmMap[key]) osmMap[key] = {};
-            osmMap[key][hn] = { lat: Number(lat.toFixed(6)), lng: Number(lng.toFixed(6)) };
+            // Bei Doppelnummern wie 61a/61b den ersten Wert speichern
+            if (!osmMap[key][hn]) {
+              osmMap[key][hn] = { lat: Number(lat.toFixed(6)), lng: Number(lng.toFixed(6)) };
+            }
           }
         });
 
@@ -124,6 +126,64 @@
       }
     }
 
+    // Präzise Interpolation & Extrapolation entlang des Straßenverlaufs
+    function getHouseCoordinates(streetMap, num) {
+      if (streetMap[num]) return streetMap[num];
+
+      const knownNums = Object.keys(streetMap).map(Number).sort((a, b) => a - b);
+      if (knownNums.length === 0) return { lat: 50.0145, lng: 8.4440 };
+      if (knownNums.length === 1) return streetMap[knownNums[0]];
+
+      let lower = null, higher = null;
+      for (let n of knownNums) {
+        if (n < num) lower = n;
+        if (n > num && higher === null) higher = n;
+      }
+
+      // 1. Dazwischen: Exakte Punkte zwischen den beiden nächsten Nachbarn berechnen
+      if (lower !== null && higher !== null) {
+        const t = (num - lower) / (higher - lower);
+        const p1 = streetMap[lower];
+        const p2 = streetMap[higher];
+        return {
+          lat: Number((p1.lat + t * (p2.lat - p1.lat)).toFixed(6)),
+          lng: Number((p1.lng + t * (p2.lng - p1.lng)).toFixed(6))
+        };
+      }
+
+      // 2. Unterhalb der kleinsten Nummer: Entlang des ersten Straßenabschnitts nach hinten rechnen
+      if (lower === null && higher !== null) {
+        const h1 = higher;
+        const h2 = knownNums.find(n => n > h1) || h1;
+        if (h1 === h2) return streetMap[h1];
+
+        const t = (num - h1) / (h2 - h1);
+        const p1 = streetMap[h1];
+        const p2 = streetMap[h2];
+        return {
+          lat: Number((p1.lat + t * (p2.lat - p1.lat)).toFixed(6)),
+          lng: Number((p1.lng + t * (p2.lng - p1.lng)).toFixed(6))
+        };
+      }
+
+      // 3. Oberhalb der größten Nummer: Entlang des letzten Straßenabschnitts nach vorne rechnen
+      if (lower !== null && higher === null) {
+        const l2 = lower;
+        const l1 = [...knownNums].reverse().find(n => n < l2) || l2;
+        if (l1 === l2) return streetMap[l2];
+
+        const t = (num - l2) / (l2 - l1);
+        const p1 = streetMap[l1];
+        const p2 = streetMap[l2];
+        return {
+          lat: Number((p2.lat + t * (p2.lat - p1.lat)).toFixed(6)),
+          lng: Number((p2.lng + t * (p2.lng - p1.lng)).toFixed(6))
+        };
+      }
+
+      return { lat: 50.0145, lng: 8.4440 };
+    }
+
     function buildExactWaypoints(osmMap) {
       waypoints = [];
 
@@ -132,39 +192,7 @@
         const streetMap = osmMap[sKey] || {};
 
         section.nums.forEach(num => {
-          let coords = null;
-          const overrideKey = `${sKey}|${num}`;
-
-          if (manualOverrides[overrideKey]) {
-            coords = manualOverrides[overrideKey];
-          } 
-          else if (streetMap[num]) {
-            coords = streetMap[num];
-          } 
-          else {
-            const knownNums = Object.keys(streetMap).map(Number).sort((a,b) => a - b);
-            let lower = null, higher = null;
-
-            for (let n of knownNums) {
-              if (n < num) lower = n;
-              if (n > num && higher === null) higher = n;
-            }
-
-            if (lower !== null && higher !== null) {
-              const t = (num - lower) / (higher - lower);
-              coords = {
-                lat: Number((streetMap[lower].lat + t * (streetMap[higher].lat - streetMap[lower].lat)).toFixed(6)),
-                lng: Number((streetMap[lower].lng + t * (streetMap[higher].lng - streetMap[lower].lng)).toFixed(6))
-              };
-            } else if (lower !== null) {
-              coords = streetMap[lower];
-            } else if (higher !== null) {
-              coords = streetMap[higher];
-            } else {
-              coords = { lat: 50.0145, lng: 8.4440 };
-            }
-          }
-
+          const coords = getHouseCoordinates(streetMap, num);
           const label = (num === 57 && section.nums.length === 1 && waypoints.length > 0) 
             ? "Ziel erreicht! Wieder Zuhause." 
             : `${section.street} ${num}`;
@@ -173,7 +201,7 @@
         });
       });
 
-      localStorage.setItem('raunheim_exact_route_v5', JSON.stringify(waypoints));
+      localStorage.setItem('raunheim_exact_route_v6', JSON.stringify(waypoints));
       startApp();
     }
 
@@ -181,7 +209,7 @@
       const nextBtn = document.getElementById('next-btn');
       nextBtn.disabled = false;
       document.getElementById('next-step').innerText = "Bereit zum Starten!";
-      document.getElementById('progress').innerText = `${waypoints.length} Hausnummern bereit`;
+      document.getElementById('progress').innerText = `${waypoints.length} Hausnummern geladen`;
 
       if (waypoints.length > 0) {
         map.setView([waypoints[0].lat, waypoints[0].lng], 18);
@@ -189,7 +217,7 @@
     }
 
     function clearRouteCache() {
-      localStorage.removeItem('raunheim_exact_route_v5');
+      localStorage.removeItem('raunheim_exact_route_v6');
       location.reload();
     }
 
