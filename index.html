@@ -11,9 +11,9 @@
     #next-step { font-size: 1.2rem; font-weight: bold; margin-bottom: 5px; color: #facc15; }
     #progress { font-size: 0.85rem; color: #94a3b8; margin-bottom: 12px; }
     .btn-group { display: flex; gap: 10px; justify-content: center; width: 100%; max-width: 360px; margin: 0 auto; }
-    .nav-btn { flex: 1; padding: 14px 10px; font-size: 1rem; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; color: white; }
+    .nav-btn { flex: 1; padding: 14px 10px; font-size: 1rem; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; color: white; touch-action: manipulation; }
     #prev-btn { background: #475569; }
-    #prev-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    #prev-btn:disabled { opacity: 0.3; cursor: not-allowed; }
     #next-btn { background: #16a34a; }
     #next-btn:disabled { background: #475569; cursor: not-allowed; }
     #map { flex: 1; width: 100%; }
@@ -26,10 +26,10 @@
     <div id="next-step">Lade Gebäude-Koordinaten...</div>
     <div id="progress">Bitte einen Moment Geduld</div>
     <div class="btn-group">
-      <button id="prev-btn" class="nav-btn" onclick="prevWaypoint()" disabled>⬅ Zurück</button>
-      <button id="next-btn" class="nav-btn" onclick="nextWaypoint()" disabled>Weiter ➔</button>
+      <button id="prev-btn" class="nav-btn" type="button" onclick="prevWaypoint()" disabled>⬅ Zurück</button>
+      <button id="next-btn" class="nav-btn" type="button" onclick="nextWaypoint()" disabled>Weiter ➔</button>
     </div>
-    <div><button id="reset-btn" onclick="clearRouteCache()">Daten neu laden</button></div>
+    <div><button id="reset-btn" type="button" onclick="clearRouteCache()">Daten neu laden</button></div>
   </div>
 
   <div id="map"></div>
@@ -37,11 +37,10 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
     let map, userMarker, targetMarker;
-    let speechSynth = window.speechSynthesis;
     let waypoints = [];
-    let currentStep = -1;
+    let currentStep = 0;
 
-    // Perfekt optimierter Laufweg (Start & Ziel: Ringstraße 57)
+    // Perfekt optimierter Kreis-Laufweg (Start & Ende: Ringstraße 57)
     const deliveryPlan = [
       { street: "Ringstraße", nums: [57] },
       { street: "Ringstraße", nums: makeRange(56, 70, 2) },
@@ -75,8 +74,7 @@
     }
 
     async function loadRouteData() {
-      // Version auf v6 aktualisiert, um alte falsche Daten sofort zu überschreiben
-      const cached = localStorage.getItem('raunheim_exact_route_v6');
+      const cached = localStorage.getItem('raunheim_exact_route_v7');
       if (cached) {
         waypoints = JSON.parse(cached);
         startApp();
@@ -112,7 +110,6 @@
           if (st && !isNaN(hn) && lat && lng) {
             const key = cleanStreet(st);
             if (!osmMap[key]) osmMap[key] = {};
-            // Bei Doppelnummern wie 61a/61b den ersten Wert speichern
             if (!osmMap[key][hn]) {
               osmMap[key][hn] = { lat: Number(lat.toFixed(6)), lng: Number(lng.toFixed(6)) };
             }
@@ -126,7 +123,6 @@
       }
     }
 
-    // Präzise Interpolation & Extrapolation entlang des Straßenverlaufs
     function getHouseCoordinates(streetMap, num) {
       if (streetMap[num]) return streetMap[num];
 
@@ -140,7 +136,6 @@
         if (n > num && higher === null) higher = n;
       }
 
-      // 1. Dazwischen: Exakte Punkte zwischen den beiden nächsten Nachbarn berechnen
       if (lower !== null && higher !== null) {
         const t = (num - lower) / (higher - lower);
         const p1 = streetMap[lower];
@@ -151,34 +146,12 @@
         };
       }
 
-      // 2. Unterhalb der kleinsten Nummer: Entlang des ersten Straßenabschnitts nach hinten rechnen
       if (lower === null && higher !== null) {
-        const h1 = higher;
-        const h2 = knownNums.find(n => n > h1) || h1;
-        if (h1 === h2) return streetMap[h1];
-
-        const t = (num - h1) / (h2 - h1);
-        const p1 = streetMap[h1];
-        const p2 = streetMap[h2];
-        return {
-          lat: Number((p1.lat + t * (p2.lat - p1.lat)).toFixed(6)),
-          lng: Number((p1.lng + t * (p2.lng - p1.lng)).toFixed(6))
-        };
+        return streetMap[higher];
       }
 
-      // 3. Oberhalb der größten Nummer: Entlang des letzten Straßenabschnitts nach vorne rechnen
       if (lower !== null && higher === null) {
-        const l2 = lower;
-        const l1 = [...knownNums].reverse().find(n => n < l2) || l2;
-        if (l1 === l2) return streetMap[l2];
-
-        const t = (num - l2) / (l2 - l1);
-        const p1 = streetMap[l1];
-        const p2 = streetMap[l2];
-        return {
-          lat: Number((p2.lat + t * (p2.lat - p1.lat)).toFixed(6)),
-          lng: Number((p2.lng + t * (p2.lng - p1.lng)).toFixed(6))
-        };
+        return streetMap[lower];
       }
 
       return { lat: 50.0145, lng: 8.4440 };
@@ -201,23 +174,50 @@
         });
       });
 
-      localStorage.setItem('raunheim_exact_route_v6', JSON.stringify(waypoints));
+      localStorage.setItem('raunheim_exact_route_v7', JSON.stringify(waypoints));
       startApp();
     }
 
     function startApp() {
-      const nextBtn = document.getElementById('next-btn');
-      nextBtn.disabled = false;
-      document.getElementById('next-step').innerText = "Bereit zum Starten!";
-      document.getElementById('progress').innerText = `${waypoints.length} Hausnummern geladen`;
-
       if (waypoints.length > 0) {
-        map.setView([waypoints[0].lat, waypoints[0].lng], 18);
+        showStep(0);
+      }
+    }
+
+    function showStep(index) {
+      if (index < 0 || index >= waypoints.length) return;
+
+      currentStep = index;
+      const item = waypoints[currentStep];
+
+      document.getElementById('next-step').innerText = item.name;
+      document.getElementById('progress').innerText = `Station ${currentStep + 1} von ${waypoints.length}`;
+      
+      speak(item.name);
+
+      if (targetMarker) map.removeLayer(targetMarker);
+      
+      targetMarker = L.marker([item.lat, item.lng]).addTo(map).bindPopup(item.name).openPopup();
+      map.setView([item.lat, item.lng], 18);
+
+      document.getElementById('prev-btn').disabled = (currentStep === 0);
+      document.getElementById('next-btn').disabled = (currentStep === waypoints.length - 1);
+    }
+
+    function nextWaypoint() {
+      if (currentStep < waypoints.length - 1) {
+        showStep(currentStep + 1);
+      }
+    }
+
+    function prevWaypoint() {
+      if (currentStep > 0) {
+        showStep(currentStep - 1);
       }
     }
 
     function clearRouteCache() {
-      localStorage.removeItem('raunheim_exact_route_v6');
+      localStorage.removeItem('raunheim_exact_route_v7');
       location.reload();
     }
 
@@ -257,43 +257,15 @@
     }
 
     function speak(text) {
-      if (speechSynth) {
-        speechSynth.cancel();
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = 'de-DE';
-        speechSynth.speak(utterance);
-      }
-    }
-
-    function updateWaypointUI() {
-      if (currentStep < 0 || currentStep >= waypoints.length) return;
-
-      const item = waypoints[currentStep];
-
-      document.getElementById('next-step').innerText = item.name;
-      document.getElementById('progress').innerText = `Station ${currentStep + 1} von ${waypoints.length}`;
-      speak(item.name);
-
-      if (targetMarker) map.removeLayer(targetMarker);
-      
-      targetMarker = L.marker([item.lat, item.lng]).addTo(map).bindPopup(item.name).openPopup();
-      map.setView([item.lat, item.lng], 18);
-
-      document.getElementById('prev-btn').disabled = (currentStep <= 0);
-      document.getElementById('next-btn').disabled = (currentStep >= waypoints.length - 1);
-    }
-
-    function nextWaypoint() {
-      if (currentStep < waypoints.length - 1) {
-        currentStep++;
-        updateWaypointUI();
-      }
-    }
-
-    function prevWaypoint() {
-      if (currentStep > 0) {
-        currentStep--;
-        updateWaypointUI();
+      try {
+        if ('speechSynthesis' in window && window.speechSynthesis) {
+          window.speechSynthesis.cancel();
+          const utterance = new SpeechSynthesisUtterance(text);
+          utterance.lang = 'de-DE';
+          window.speechSynthesis.speak(utterance);
+        }
+      } catch (e) {
+        console.log("Sprachausgabe Fehler:", e);
       }
     }
 
