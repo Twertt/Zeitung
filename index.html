@@ -25,16 +25,16 @@
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
-    // Exakte Koordinaten für Raunheim West (Ringstraße / Oderstraße)
+    // Liste deiner Straßen & Hausnummern aus dem Zustellplan
     const waypoints = [
-      { name: "Start: Ringstraße 57", lat: 50.01210, lng: 8.44420 },
-      { name: "1. Ringstraße Hnr. 56 bis 70", lat: 50.01230, lng: 8.44440 },
-      { name: "2. Oderstraße Hnr. 1 bis 73", lat: 50.01340, lng: 8.44350 },
-      { name: "3. Moselstraße Hnr. 1 bis 11, 13 bis 14 und 18 bis 22", lat: 50.01370, lng: 8.44460 },
-      { name: "4. Aussiger Straße Hnr. 1 bis 18 und 20 bis 22", lat: 50.01420, lng: 8.44550 },
-      { name: "5. Jakobstraße Hnr. 48 bis 52", lat: 50.01380, lng: 8.44630 },
-      { name: "6. Ringstraße Hnr. 72 bis 122", lat: 50.01290, lng: 8.44520 },
-      { name: "Ziel erreicht! Wieder Zuhause.", lat: 50.01210, lng: 8.44420 }
+      { name: "Start: Ringstraße 57", query: "Ringstraße 57, 65479 Raunheim" },
+      { name: "1. Ringstraße Hnr. 56 bis 70", query: "Ringstraße 60, 65479 Raunheim" },
+      { name: "2. Oderstraße Hnr. 1 bis 73", query: "Oderstraße 1, 65479 Raunheim" },
+      { name: "3. Moselstraße Hnr. 1-11, 13-14, 18-22", query: "Moselstraße 1, 65479 Raunheim" },
+      { name: "4. Aussiger Straße Hnr. 1-18, 20-22", query: "Aussiger Straße 1, 65479 Raunheim" },
+      { name: "5. Jakobstraße Hnr. 48 bis 52", query: "Jakobstraße 48, 65479 Raunheim" },
+      { name: "6. Ringstraße Hnr. 72 bis 122", query: "Ringstraße 80, 65479 Raunheim" },
+      { name: "Ziel erreicht! Wieder Zuhause.", query: "Ringstraße 57, 65479 Raunheim" }
     ];
 
     let currentStep = -1;
@@ -42,8 +42,8 @@
     let speechSynth = window.speechSynthesis;
 
     function initMap() {
-      // Zentrierung exakt auf dein Wohngebiet
-      map = L.map('map').setView([50.01250, 8.44450], 17);
+      // Karte initialisieren
+      map = L.map('map').setView([50.0105, 8.4410], 17);
 
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap'
@@ -70,7 +70,7 @@
               userMarker.setLatLng([lat, lng]);
             }
           },
-          (err) => console.log("GPS Suche..."),
+          (err) => console.log("GPS Fehler / Suche..."),
           { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
         );
       }
@@ -85,7 +85,8 @@
       }
     }
 
-    function nextWaypoint() {
+    // Wandelt die Adresse automatisch in Kartendaten um
+    async function nextWaypoint() {
       if (currentStep < waypoints.length - 1) {
         currentStep++;
         const point = waypoints[currentStep];
@@ -93,10 +94,22 @@
         document.getElementById('next-step').innerText = point.name;
         speak(point.name);
 
-        if (targetMarker) map.removeLayer(targetMarker);
-        targetMarker = L.marker([point.lat, point.lng]).addTo(map).bindPopup(point.name).openPopup();
+        try {
+          const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(point.query)}`);
+          const data = await res.json();
 
-        map.setView([point.lat, point.lng], 17);
+          if (data && data.length > 0) {
+            const lat = parseFloat(data[0].lat);
+            const lng = parseFloat(data[0].lon);
+
+            if (targetMarker) map.removeLayer(targetMarker);
+            targetMarker = L.marker([lat, lng]).addTo(map).bindPopup(point.name).openPopup();
+
+            map.setView([lat, lng], 17);
+          }
+        } catch (e) {
+          console.error("Geocoding Fehler", e);
+        }
       }
     }
 
