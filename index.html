@@ -41,7 +41,7 @@
     let waypoints = [];
     let currentStep = -1;
 
-    // Manuelle Korrekturen für Hausnummern, die in OSM fehlen oder ungenau platziert sind
+    // Manuelle Korrekturen für Hausnummern mit ungenauen OpenStreetMap-Daten
     const manualOverrides = {
       "oderstr|61": { lat: 50.01785, lng: 8.44310 },
       "oderstr|63": { lat: 50.01793, lng: 8.44315 },
@@ -49,7 +49,7 @@
       "oderstr|67": { lat: 50.01809, lng: 8.44325 }
     };
 
-    // Gewünschte Austrag-Reihenfolge
+    // Perfekt optimierter Laufweg ohne Doppler (Start & Ende: Ringstraße 57)
     const deliveryPlan = [
       { street: "Ringstraße", nums: [57] },
       { street: "Ringstraße", nums: makeRange(56, 70, 2) },
@@ -79,7 +79,7 @@
     }
 
     async function loadRouteData() {
-      const cached = localStorage.getItem('raunheim_exact_route_v4');
+      const cached = localStorage.getItem('raunheim_exact_route_v5');
       if (cached) {
         waypoints = JSON.parse(cached);
         startApp();
@@ -135,15 +135,12 @@
           let coords = null;
           const overrideKey = `${sKey}|${num}`;
 
-          // 1. Priorität: Manuelle Exakt-Korrektur
           if (manualOverrides[overrideKey]) {
             coords = manualOverrides[overrideKey];
           } 
-          // 2. Priorität: Exakter Treffer aus OpenStreetMap
           else if (streetMap[num]) {
             coords = streetMap[num];
           } 
-          // 3. Priorität: Interpolation zwischen direkten Nachbarn der Straße
           else {
             const knownNums = Object.keys(streetMap).map(Number).sort((a,b) => a - b);
             let lower = null, higher = null;
@@ -176,7 +173,7 @@
         });
       });
 
-      localStorage.setItem('raunheim_exact_route_v4', JSON.stringify(waypoints));
+      localStorage.setItem('raunheim_exact_route_v5', JSON.stringify(waypoints));
       startApp();
     }
 
@@ -192,7 +189,7 @@
     }
 
     function clearRouteCache() {
-      localStorage.removeItem('raunheim_exact_route_v4');
+      localStorage.removeItem('raunheim_exact_route_v5');
       location.reload();
     }
 
