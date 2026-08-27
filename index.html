@@ -3,23 +3,20 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Zeitung Austragen - Raunheim Route v16</title>
+  <title>Zeitung Austragen - Raunheim Route v17</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg-main: #0f172a;
-      --bg-card: rgba(30, 41, 59, 0.85);
-      --bg-card-solid: #1e293b;
-      --accent: #38bdf8;
-      --accent-gradient: linear-gradient(135deg, #38bdf8 0%, #818cf8 100%);
-      --success: #10b981;
-      --danger: #f43f5e;
+      --bg-main: #090d16;
+      --bg-card: rgba(15, 23, 42, 0.9);
+      --bg-card-solid: #0f172a;
+      --accent: #00f2fe;
+      --accent-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
       --text-main: #f8fafc;
       --text-muted: #94a3b8;
-      --border: rgba(255, 255, 255, 0.08);
-      --radius: 16px;
-      --shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.4);
+      --border: rgba(255, 255, 255, 0.1);
+      --shadow: 0 12px 30px -10px rgba(0, 0, 0, 0.6);
     }
 
     * { box-sizing: border-box; }
@@ -37,8 +34,8 @@
 
     #info-box { 
       background: var(--bg-card);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
       border-bottom: 1px solid var(--border);
       padding: 16px 20px; 
       z-index: 1000; 
@@ -56,8 +53,8 @@
 
     #progress { 
       font-size: 0.75rem; 
-      font-weight: 600;
-      letter-spacing: 0.05em;
+      font-weight: 700;
+      letter-spacing: 0.08em;
       text-transform: uppercase;
       color: var(--accent); 
     }
@@ -65,19 +62,19 @@
     #mode-badge {
       font-size: 0.7rem;
       font-weight: 700;
-      background: rgba(56, 189, 248, 0.15);
+      background: rgba(0, 242, 254, 0.15);
       color: var(--accent);
-      padding: 3px 8px;
+      padding: 3px 10px;
       border-radius: 20px;
-      border: 1px solid rgba(56, 189, 248, 0.3);
+      border: 1px solid rgba(0, 242, 254, 0.4);
       display: none;
     }
     #mode-badge.active { display: inline-block; animation: pulse 1.5s infinite; }
 
     @keyframes pulse {
-      0% { opacity: 1; }
-      50% { opacity: 0.5; }
-      100% { opacity: 1; }
+      0% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.6; transform: scale(0.97); }
+      100% { opacity: 1; transform: scale(1); }
     }
 
     #next-step { 
@@ -92,10 +89,10 @@
       font-size: 0.85rem; 
       margin-bottom: 12px; 
       text-align: left; 
-      background: rgba(15, 23, 42, 0.6); 
+      background: rgba(5, 8, 15, 0.7); 
       border: 1px solid var(--border);
       padding: 10px 12px; 
-      border-radius: 10px; 
+      border-radius: 12px; 
       max-height: 90px; 
       overflow-y: auto; 
     }
@@ -119,22 +116,22 @@
     
     .nav-btn { 
       flex: 1; 
-      padding: 12px; 
+      padding: 13px; 
       font-size: 0.95rem; 
-      border-radius: 12px; 
+      border-radius: 14px; 
       border: none; 
-      font-weight: 700; 
+      font-weight: 800; 
       cursor: pointer; 
       color: white; 
       touch-action: manipulation; 
       transition: transform 0.1s ease, filter 0.2s;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
     }
     .nav-btn:active { transform: scale(0.97); }
-    #prev-btn { background: #334155; border: 1px solid var(--border); }
+    #prev-btn { background: #1e293b; border: 1px solid var(--border); color: var(--text-muted); }
     #prev-btn:disabled { opacity: 0.3; cursor: not-allowed; }
-    #next-btn { background: var(--accent-gradient); color: #0f172a; font-weight: 800; }
-    #next-btn:disabled { background: #334155; color: var(--text-muted); cursor: not-allowed; }
+    #next-btn { background: var(--accent-gradient); color: #090d16; }
+    #next-btn:disabled { background: #1e293b; color: var(--text-muted); cursor: not-allowed; }
 
     .toolbar {
       display: flex;
@@ -145,19 +142,19 @@
     }
 
     .tool-btn {
-      background: rgba(255, 255, 255, 0.05);
+      background: rgba(255, 255, 255, 0.04);
       color: var(--text-main);
       border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 7px 12px;
+      border-radius: 12px;
+      padding: 8px 12px;
       font-size: 0.75rem;
       font-weight: 600;
       cursor: pointer;
       transition: all 0.2s;
     }
-    .tool-btn:hover { background: rgba(255, 255, 255, 0.1); }
-    .tool-btn.highlight { border-color: var(--accent); color: var(--accent); }
-    .tool-btn.active-pin-mode { background: var(--accent); color: #0f172a; font-weight: 700; border-color: var(--accent); }
+    .tool-btn:hover { background: rgba(255, 255, 255, 0.08); }
+    .tool-btn.highlight { border-color: rgba(0, 242, 254, 0.4); color: var(--accent); }
+    .tool-btn.active-pin-mode { background: var(--accent-gradient); color: #090d16; font-weight: 800; border-color: transparent; box-shadow: 0 0 15px rgba(0,242,254,0.4); }
 
     .note-actions { 
       display: flex; 
@@ -168,10 +165,10 @@
     }
     
     .note-btn { 
-      background: rgba(255, 255, 255, 0.05); 
+      background: rgba(255, 255, 255, 0.04); 
       color: var(--text-main); 
       border: 1px solid var(--border); 
-      border-radius: 10px; 
+      border-radius: 12px; 
       padding: 7px 12px; 
       font-size: 0.75rem; 
       font-weight: 600;
@@ -200,14 +197,18 @@
     }
     #reset-btn:hover { color: var(--text-main); text-decoration: underline; }
 
-    #map { flex: 1; width: 100%; z-index: 1; }
+    #map { flex: 1; width: 100%; z-index: 1; background-color: #090d16; }
 
-    /* Custom Leaflet Dark UI Overrides */
+    /* Custom Leaflet Dark Filter Overrides (Macht Standardkacheln dunkel ohne API-Key) */
+    .leaflet-tile {
+      filter: brightness(0.6) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3);
+    }
+
     .leaflet-popup-content-wrapper, .leaflet-popup-tip {
       background: var(--bg-card-solid) !important;
       color: var(--text-main) !important;
       border: 1px solid var(--border);
-      border-radius: 12px;
+      border-radius: 14px;
       box-shadow: var(--shadow);
     }
     .leaflet-container { font-family: 'Plus Jakarta Sans', sans-serif !important; }
@@ -218,7 +219,7 @@
   <div id="info-box">
     <div class="header-row">
       <div id="progress">Lade Stationen...</div>
-      <div id="mode-badge">📍 Pin-Modus aktiv</div>
+      <div id="mode-badge">📍 Tippe auf die echte Position!</div>
     </div>
     
     <div id="next-step">Route wird initialisiert</div>
@@ -229,7 +230,7 @@
       <button id="next-btn" class="nav-btn" type="button" onclick="nextWaypoint()">Weiter ➔</button>
     </div>
 
-    <!-- Stylische Werkzeugleiste -->
+    <!-- Werkzeugleiste -->
     <div class="toolbar">
       <button class="tool-btn" type="button" onclick="moveCurrentWaypoint(-1)">⬆ Vorziehen</button>
       <button class="tool-btn" type="button" onclick="moveCurrentWaypoint(1)">⬇ Nach hinten</button>
@@ -244,7 +245,7 @@
     
     <div class="footer-options">
       <button id="reset-btn" type="button" onclick="clearRouteCache()">Standard-Route wiederherstellen</button>
-      <span style="font-size: 0.7rem; color: var(--text-muted);">Raunheim v16</span>
+      <span style="font-size: 0.7rem; color: var(--text-muted);">Raunheim v17</span>
     </div>
   </div>
 
@@ -285,13 +286,13 @@
     }
 
     async function loadRouteData() {
-      const savedNotes = localStorage.getItem('raunheim_route_parties_v16');
+      const savedNotes = localStorage.getItem('raunheim_route_parties_v17');
       if (savedNotes) customNotes = JSON.parse(savedNotes);
 
-      const savedCoords = localStorage.getItem('raunheim_custom_coords_v16');
+      const savedCoords = localStorage.getItem('raunheim_custom_coords_v17');
       if (savedCoords) customCoords = JSON.parse(savedCoords);
 
-      const savedWaypoints = localStorage.getItem('raunheim_custom_waypoints_v16');
+      const savedWaypoints = localStorage.getItem('raunheim_custom_waypoints_v17');
       if (savedWaypoints) {
         waypoints = JSON.parse(savedWaypoints);
         applyCustomCoordsToWaypoints();
@@ -389,7 +390,7 @@
       });
 
       applyCustomCoordsToWaypoints();
-      localStorage.setItem('raunheim_custom_waypoints_v16', JSON.stringify(waypoints));
+      localStorage.setItem('raunheim_custom_waypoints_v17', JSON.stringify(waypoints));
       startApp();
     }
 
@@ -439,7 +440,7 @@
       map.setView([item.lat, item.lng], 18);
       
       if (isPinCorrectionMode) {
-        togglePinMode(); // Automatisches Ausschalten nach Klickwechsel
+        togglePinMode();
       }
 
       document.getElementById('prev-btn').disabled = (currentStep === 0);
@@ -467,7 +468,7 @@
       const item = waypoints.splice(currentStep, 1)[0];
       waypoints.splice(targetIndex, 0, item);
 
-      localStorage.setItem('raunheim_custom_waypoints_v16', JSON.stringify(waypoints));
+      localStorage.setItem('raunheim_custom_waypoints_v17', JSON.stringify(waypoints));
       showStep(targetIndex);
     }
 
@@ -480,7 +481,7 @@
       const partyNum = customNotes[item.id].length + 1;
       customNotes[item.id].push(`Partei ${partyNum}: ${noteText.replace('Partei: ', '')}`);
 
-      localStorage.setItem('raunheim_route_parties_v16', JSON.stringify(customNotes));
+      localStorage.setItem('raunheim_route_parties_v17', JSON.stringify(customNotes));
       showStep(currentStep);
     }
 
@@ -491,7 +492,7 @@
       customNotes[item.id].splice(index, 1);
       if (customNotes[item.id].length === 0) delete customNotes[item.id];
 
-      localStorage.setItem('raunheim_route_parties_v16', JSON.stringify(customNotes));
+      localStorage.setItem('raunheim_route_parties_v17', JSON.stringify(customNotes));
       showStep(currentStep);
     }
 
@@ -500,7 +501,7 @@
       if (!item) return;
 
       delete customNotes[item.id];
-      localStorage.setItem('raunheim_route_parties_v16', JSON.stringify(customNotes));
+      localStorage.setItem('raunheim_route_parties_v17', JSON.stringify(customNotes));
       showStep(currentStep);
     }
 
@@ -513,9 +514,9 @@
     }
 
     function clearRouteCache() {
-      localStorage.removeItem('raunheim_custom_waypoints_v16');
-      localStorage.removeItem('raunheim_route_parties_v16');
-      localStorage.removeItem('raunheim_custom_coords_v16');
+      localStorage.removeItem('raunheim_custom_waypoints_v17');
+      localStorage.removeItem('raunheim_route_parties_v17');
+      localStorage.removeItem('raunheim_custom_coords_v17');
       location.reload();
     }
 
@@ -523,13 +524,13 @@
       map = L.map('map', { zoomControl: false }).setView([50.0145, 8.4440], 18);
       L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-      // Stylisches Dark Map Theme (CartoDB Dark Matter)
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-        attribution: '&copy; OpenStreetMap &copy; CARTO',
-        maxZoom: 20
+      // Kostenlose Standard-OpenStreetMap-Kacheln (mit CSS-Darkmode-Filter)
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap',
+        maxZoom: 19
       }).addTo(map);
 
-      // Klick-Event für Pin-Verschiebung
+      // Klick-Event zum Korrigieren der Position
       map.on('click', function(e) {
         if (!isPinCorrectionMode) return;
         
@@ -539,11 +540,10 @@
         item.lat = Number(e.latlng.lat.toFixed(6));
         item.lng = Number(e.latlng.lng.toFixed(6));
 
-        // Dauerhaft speichern
         const coordKey = `${item.street}_${item.num}`;
         customCoords[coordKey] = { lat: item.lat, lng: item.lng };
-        localStorage.setItem('raunheim_custom_coords_v16', JSON.stringify(customCoords));
-        localStorage.setItem('raunheim_custom_waypoints_v16', JSON.stringify(waypoints));
+        localStorage.setItem('raunheim_custom_coords_v17', JSON.stringify(customCoords));
+        localStorage.setItem('raunheim_custom_waypoints_v17', JSON.stringify(waypoints));
 
         showStep(currentStep);
       });
@@ -561,8 +561,8 @@
 
             if (!userMarker) {
               userMarker = L.circleMarker([lat, lng], {
-                color: '#38bdf8',
-                fillColor: '#38bdf8',
+                color: '#00f2fe',
+                fillColor: '#00f2fe',
                 fillOpacity: 0.9,
                 radius: 8,
                 weight: 3
