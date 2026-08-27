@@ -40,17 +40,34 @@
     let waypoints = [];
     let currentStep = 0;
 
-    // Perfekt optimierter Kreis-Laufweg (Start & Ende: Ringstraße 57)
+    // Logischer Laufweg: Straße entlanglaufen & Nebenstraßen direkt beim Vorbeilaufen abarbeiten
     const deliveryPlan = [
+      // Start & Übergang
       { street: "Ringstraße", nums: [57] },
-      { street: "Ringstraße", nums: makeRange(56, 70, 2) },
-      { street: "Oderstraße", nums: makeRange(1, 73, 2) },
-      { street: "Oderstraße", nums: makeRange(72, 2, 2) },
+      { street: "Ringstraße", nums: [56, 58, 60] },
+
+      // Moselstraße liegt direkt bei Haus 60
       { street: "Moselstraße", nums: [1,3,5,7,9,11,13,19,21] },
       { street: "Moselstraße", nums: [22,20,18,14,10,8,6,4,2] },
+
+      // Ringstraße weiter bis Oderstraße
+      { street: "Ringstraße", nums: [62, 64, 66] },
+
+      // Oderstraße liegt bei Haus 66
+      { street: "Oderstraße", nums: makeRange(1, 73, 2) },
+      { street: "Oderstraße", nums: makeRange(72, 2, 2) },
+
+      // Ringstraße weiter bis Aussiger Straße
+      { street: "Ringstraße", nums: [68, 70] },
+
+      // Aussiger Straße
       { street: "Aussiger Straße", nums: [1,3,5,7,9,11,13,15,17,21] },
       { street: "Aussiger Straße", nums: [22,20,18,16,14,12,10,8,6,4,2] },
+
+      // Jakobstraße
       { street: "Jakobstraße", nums: makeRange(48, 52, 1) },
+
+      // Ringstraße Heimweg zurück zu Haus 57
       { street: "Ringstraße", nums: makeRange(72, 122, 2) },
       { street: "Ringstraße", nums: [57] }
     ];
@@ -74,7 +91,7 @@
     }
 
     async function loadRouteData() {
-      const cached = localStorage.getItem('raunheim_exact_route_v7');
+      const cached = localStorage.getItem('raunheim_exact_route_v8');
       if (cached) {
         waypoints = JSON.parse(cached);
         startApp();
@@ -146,13 +163,8 @@
         };
       }
 
-      if (lower === null && higher !== null) {
-        return streetMap[higher];
-      }
-
-      if (lower !== null && higher === null) {
-        return streetMap[lower];
-      }
+      if (lower === null && higher !== null) return streetMap[higher];
+      if (lower !== null && higher === null) return streetMap[lower];
 
       return { lat: 50.0145, lng: 8.4440 };
     }
@@ -174,7 +186,7 @@
         });
       });
 
-      localStorage.setItem('raunheim_exact_route_v7', JSON.stringify(waypoints));
+      localStorage.setItem('raunheim_exact_route_v8', JSON.stringify(waypoints));
       startApp();
     }
 
@@ -217,7 +229,7 @@
     }
 
     function clearRouteCache() {
-      localStorage.removeItem('raunheim_exact_route_v7');
+      localStorage.removeItem('raunheim_exact_route_v8');
       location.reload();
     }
 
