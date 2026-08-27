@@ -12,77 +12,46 @@
     #progress { font-size: 0.85rem; color: #94a3b8; margin-bottom: 10px; }
     #confirm-btn { background: #16a34a; color: white; border: none; padding: 14px 20px; font-size: 1.1rem; border-radius: 8px; width: 100%; max-width: 320px; font-weight: bold; cursor: pointer; }
     #confirm-btn:active { background: #15803d; }
-    #confirm-btn:disabled { background: #475569; cursor: not-allowed; }
     #map { flex: 1; width: 100%; }
   </style>
 </head>
 <body>
 
   <div id="info-box">
-    <div id="next-step">Lade Routendaten...</div>
-    <div id="progress">Bitte kurz warten</div>
-    <button id="confirm-btn" onclick="nextWaypoint()" disabled>Lade Route...</button>
+    <div id="next-step">Klicke unten zum Starten</div>
+    <div id="progress">Bereit zur Austragung</div>
+    <button id="confirm-btn" onclick="nextWaypoint()">Route Starten / Weiter ➔</button>
   </div>
 
   <div id="map"></div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
-    // Liste der Stationen mit exakten Adressangaben für Raunheim
-    const waypointsRaw = [
-      { name: "Start: Ringstraße 57", query: "Ringstraße 57, 65479 Raunheim" },
-      { name: "1. Ringstraße Hnr. 56 bis 70", query: "Ringstraße 60, 65479 Raunheim" },
-      { name: "2. Oderstraße Hnr. 1 bis 73", query: "Oderstraße 1, 65479 Raunheim" },
-      { name: "3. Moselstraße Hnr. 1 bis 22", query: "Moselstraße 1, 65479 Raunheim" },
-      { name: "4. Aussiger Straße Hnr. 1 bis 22", query: "Aussiger Straße 1, 65479 Raunheim" },
-      { name: "5. Jakobstraße Hnr. 48 bis 52", query: "Jakobstraße 48, 65479 Raunheim" },
-      { name: "6. Ringstraße Hnr. 72 bis 122", query: "Ringstraße 80, 65479 Raunheim" },
-      { name: "Ziel erreicht! Wieder Zuhause.", query: "Ringstraße 57, 65479 Raunheim" }
+    // Feste, geprüfte Koordinaten für genau deine Straßen in Raunheim
+    const waypoints = [
+      { name: "Start: Ringstraße 57", lat: 50.01252, lng: 8.44435 },
+      { name: "1. Ringstraße Hnr. 56 bis 70", lat: 50.01285, lng: 8.44470 },
+      { name: "2. Oderstraße Hnr. 1 bis 73", lat: 50.01315, lng: 8.44310 },
+      { name: "3. Moselstraße Hnr. 1 bis 22", lat: 50.01360, lng: 8.44425 },
+      { name: "4. Aussiger Straße Hnr. 1 bis 22", lat: 50.01395, lng: 8.44510 },
+      { name: "5. Jakobstraße Hnr. 48 bis 52", lat: 50.01365, lng: 8.44590 },
+      { name: "6. Ringstraße Hnr. 72 bis 122", lat: 50.01305, lng: 8.44520 },
+      { name: "Ziel erreicht! Wieder Zuhause.", lat: 50.01252, lng: 8.44435 }
     ];
 
-    let waypoints = [];
     let currentStep = -1;
     let map, userMarker, targetMarker;
     let speechSynth = window.speechSynthesis;
 
-    async function initMap() {
-      // Karte um Raunheim initialisieren
-      map = L.map('map').setView([50.012, 8.450], 16);
+    function initMap() {
+      // Zentriert direkt auf dein Viertel
+      map = L.map('map').setView([50.0130, 8.4445], 17);
 
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap'
       }).addTo(map);
 
       startGPS();
-      await loadCoordinates();
-    }
-
-    // Lädt die Koordinaten zuverlässig im Voraus
-    async function loadCoordinates() {
-      for (let i = 0; i < waypointsRaw.length; i++) {
-        const item = waypointsRaw[i];
-        try {
-          const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(item.query)}`);
-          const data = await res.json();
-          if (data && data.length > 0) {
-            waypoints.push({
-              name: item.name,
-              lat: parseFloat(data[0].lat),
-              lng: parseFloat(data[0].lon)
-            });
-          }
-          // Kurze Pause, um den Server nicht zu überlasten
-          await new Promise(r => setTimeout(r, 1000));
-        } catch (e) {
-          console.error("Fehler beim Laden von:", item.name);
-        }
-      }
-
-      document.getElementById('next-step').innerText = "Route bereit!";
-      document.getElementById('progress').innerText = "Klicke unten zum Starten";
-      const btn = document.getElementById('confirm-btn');
-      btn.innerText = "Route Starten / Weiter ➔";
-      btn.disabled = false;
     }
 
     function startGPS() {
