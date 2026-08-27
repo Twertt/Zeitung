@@ -2,8 +2,15 @@
 <html lang="de">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Zeitung Austragen - Raunheim Route v17</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Raunheim Route</title>
+  
+  <!-- App-Verhalten für Smartphones -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#090d16">
+
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
@@ -19,7 +26,7 @@
       --shadow: 0 12px 30px -10px rgba(0, 0, 0, 0.6);
     }
 
-    * { box-sizing: border-box; }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
     body { 
       margin: 0; 
       padding: 0; 
@@ -199,7 +206,6 @@
 
     #map { flex: 1; width: 100%; z-index: 1; background-color: #090d16; }
 
-    /* Custom Leaflet Dark Filter Overrides (Macht Standardkacheln dunkel ohne API-Key) */
     .leaflet-tile {
       filter: brightness(0.6) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3);
     }
@@ -230,7 +236,6 @@
       <button id="next-btn" class="nav-btn" type="button" onclick="nextWaypoint()">Weiter ➔</button>
     </div>
 
-    <!-- Werkzeugleiste -->
     <div class="toolbar">
       <button class="tool-btn" type="button" onclick="moveCurrentWaypoint(-1)">⬆ Vorziehen</button>
       <button class="tool-btn" type="button" onclick="moveCurrentWaypoint(1)">⬇ Nach hinten</button>
@@ -245,7 +250,7 @@
     
     <div class="footer-options">
       <button id="reset-btn" type="button" onclick="clearRouteCache()">Standard-Route wiederherstellen</button>
-      <span style="font-size: 0.7rem; color: var(--text-muted);">Raunheim v17</span>
+      <span style="font-size: 0.7rem; color: var(--text-muted);">Raunheim v18</span>
     </div>
   </div>
 
@@ -286,13 +291,13 @@
     }
 
     async function loadRouteData() {
-      const savedNotes = localStorage.getItem('raunheim_route_parties_v17');
+      const savedNotes = localStorage.getItem('raunheim_route_parties_v18');
       if (savedNotes) customNotes = JSON.parse(savedNotes);
 
-      const savedCoords = localStorage.getItem('raunheim_custom_coords_v17');
+      const savedCoords = localStorage.getItem('raunheim_custom_coords_v18');
       if (savedCoords) customCoords = JSON.parse(savedCoords);
 
-      const savedWaypoints = localStorage.getItem('raunheim_custom_waypoints_v17');
+      const savedWaypoints = localStorage.getItem('raunheim_custom_waypoints_v18');
       if (savedWaypoints) {
         waypoints = JSON.parse(savedWaypoints);
         applyCustomCoordsToWaypoints();
@@ -390,7 +395,7 @@
       });
 
       applyCustomCoordsToWaypoints();
-      localStorage.setItem('raunheim_custom_waypoints_v17', JSON.stringify(waypoints));
+      localStorage.setItem('raunheim_custom_waypoints_v18', JSON.stringify(waypoints));
       startApp();
     }
 
@@ -468,7 +473,7 @@
       const item = waypoints.splice(currentStep, 1)[0];
       waypoints.splice(targetIndex, 0, item);
 
-      localStorage.setItem('raunheim_custom_waypoints_v17', JSON.stringify(waypoints));
+      localStorage.setItem('raunheim_custom_waypoints_v18', JSON.stringify(waypoints));
       showStep(targetIndex);
     }
 
@@ -481,7 +486,7 @@
       const partyNum = customNotes[item.id].length + 1;
       customNotes[item.id].push(`Partei ${partyNum}: ${noteText.replace('Partei: ', '')}`);
 
-      localStorage.setItem('raunheim_route_parties_v17', JSON.stringify(customNotes));
+      localStorage.setItem('raunheim_route_parties_v18', JSON.stringify(customNotes));
       showStep(currentStep);
     }
 
@@ -492,7 +497,7 @@
       customNotes[item.id].splice(index, 1);
       if (customNotes[item.id].length === 0) delete customNotes[item.id];
 
-      localStorage.setItem('raunheim_route_parties_v17', JSON.stringify(customNotes));
+      localStorage.setItem('raunheim_route_parties_v18', JSON.stringify(customNotes));
       showStep(currentStep);
     }
 
@@ -501,7 +506,7 @@
       if (!item) return;
 
       delete customNotes[item.id];
-      localStorage.setItem('raunheim_route_parties_v17', JSON.stringify(customNotes));
+      localStorage.setItem('raunheim_route_parties_v18', JSON.stringify(customNotes));
       showStep(currentStep);
     }
 
@@ -514,9 +519,9 @@
     }
 
     function clearRouteCache() {
-      localStorage.removeItem('raunheim_custom_waypoints_v17');
-      localStorage.removeItem('raunheim_route_parties_v17');
-      localStorage.removeItem('raunheim_custom_coords_v17');
+      localStorage.removeItem('raunheim_custom_waypoints_v18');
+      localStorage.removeItem('raunheim_route_parties_v18');
+      localStorage.removeItem('raunheim_custom_coords_v18');
       location.reload();
     }
 
@@ -524,13 +529,11 @@
       map = L.map('map', { zoomControl: false }).setView([50.0145, 8.4440], 18);
       L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-      // Kostenlose Standard-OpenStreetMap-Kacheln (mit CSS-Darkmode-Filter)
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; OpenStreetMap',
         maxZoom: 19
       }).addTo(map);
 
-      // Klick-Event zum Korrigieren der Position
       map.on('click', function(e) {
         if (!isPinCorrectionMode) return;
         
@@ -542,8 +545,8 @@
 
         const coordKey = `${item.street}_${item.num}`;
         customCoords[coordKey] = { lat: item.lat, lng: item.lng };
-        localStorage.setItem('raunheim_custom_coords_v17', JSON.stringify(customCoords));
-        localStorage.setItem('raunheim_custom_waypoints_v17', JSON.stringify(waypoints));
+        localStorage.setItem('raunheim_custom_coords_v18', JSON.stringify(customCoords));
+        localStorage.setItem('raunheim_custom_waypoints_v18', JSON.stringify(waypoints));
 
         showStep(currentStep);
       });
