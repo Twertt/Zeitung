@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Zeitung Austragen - Raunheim Route</title>
+  <title>Zeitung Austragen - Raunheim Route v11</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
     body { margin: 0; padding: 0; font-family: sans-serif; display: flex; flex-direction: column; height: 100vh; }
@@ -40,36 +40,38 @@
     let waypoints = [];
     let currentStep = 0;
 
-    // Exakter Lieferplan basierend auf deinen Hausnummern
+    // Optimierter Lieferplan ohne Zickzack-Laufwege
     const deliveryPlan = [
-      // Start Ringstraße
+      // 1. Start Zuhause
       { street: "Ringstraße", nums: [57] },
-      { street: "Ringstraße", nums: [56, 58, 60] },
 
-      // Moselstraße (1-11, 13-14, 18-22)
+      // 2. Ringstraße 62 abwärts Richtung 56
+      { street: "Ringstraße", nums: [62, 60, 58, 56] },
+
+      // 3. Moselstraße (1-13 ungerade hin, 22-14 gerade zurück)
       { street: "Moselstraße", nums: [1, 3, 5, 7, 9, 11, 13] },
       { street: "Moselstraße", nums: [22, 20, 18, 14] },
 
-      // Ringstraße weiter
-      { street: "Ringstraße", nums: [62, 64, 66] },
+      // 4. Ringstraße 64 bis 70
+      { street: "Ringstraße", nums: [64, 66, 68, 70] },
 
-      // Oderstraße (nur ungerade Zahlen 1 bis 73)
+      // 5. Oderstraße (Ausschließlich ungerade Zahlen 1 bis 73)
       { street: "Oderstraße", nums: makeRange(1, 73, 2) },
 
-      // Ringstraße weiter
-      { street: "Ringstraße", nums: [68, 70] },
-
-      // Aussiger Straße (1-18, 20-22)
+      // 6. Aussiger Straße (1-17 ungerade hin, 22-2 gerade zurück)
       { street: "Aussiger Straße", nums: [1, 3, 5, 7, 9, 11, 13, 15, 17] },
       { street: "Aussiger Straße", nums: [22, 20, 18, 16, 14, 12, 10, 8, 6, 4, 2] },
 
-      // Jakobstraße (48 bis 52)
+      // 7. Ringstraße 78 abwärts bis 72
+      { street: "Ringstraße", nums: [78, 76, 74, 72] },
+
+      // 8. Jakobstraße (48 bis 52)
       { street: "Jakobstraße", nums: makeRange(48, 52, 1) },
 
-      // Ringstraße (72 bis 122 gerade)
-      { street: "Ringstraße", nums: makeRange(72, 122, 2) },
+      // 9. Ringstraße (80 bis 122 gerade)
+      { street: "Ringstraße", nums: makeRange(80, 122, 2) },
 
-      // Ziel / Zuhause
+      // 10. Ziel / Wieder Zuhause
       { street: "Ringstraße", nums: [57] }
     ];
 
@@ -92,7 +94,7 @@
     }
 
     async function loadRouteData() {
-      const cached = localStorage.getItem('raunheim_exact_route_v10');
+      const cached = localStorage.getItem('raunheim_exact_route_v11');
       if (cached) {
         waypoints = JSON.parse(cached);
         startApp();
@@ -127,6 +129,9 @@
 
           if (st && !isNaN(hn) && lat && lng) {
             const key = cleanStreet(st);
+            // Strikter Filter: Oderstraße nur ungerade Hausnummern aufnehmen
+            if (key === "oderstr" && hn % 2 === 0) return;
+
             if (!osmMap[key]) osmMap[key] = {};
             if (!osmMap[key][hn]) {
               osmMap[key][hn] = { lat: Number(lat.toFixed(6)), lng: Number(lng.toFixed(6)) };
@@ -187,7 +192,7 @@
         });
       });
 
-      localStorage.setItem('raunheim_exact_route_v10', JSON.stringify(waypoints));
+      localStorage.setItem('raunheim_exact_route_v11', JSON.stringify(waypoints));
       startApp();
     }
 
@@ -230,7 +235,7 @@
     }
 
     function clearRouteCache() {
-      localStorage.removeItem('raunheim_exact_route_v10');
+      localStorage.removeItem('raunheim_exact_route_v11');
       location.reload();
     }
 
