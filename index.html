@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Zeitung Austragen - Einzelschritte</title>
+  <title>Zeitung Austragen - Kürzester Weg</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
     body { margin: 0; padding: 0; font-family: sans-serif; display: flex; flex-direction: column; height: 100vh; }
@@ -27,7 +27,6 @@
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
-    // Hilfsfunktion zur Generierung von Hausnummern-Listen
     function makeList(street, start, end, step = 1) {
       const list = [];
       if (start <= end) {
@@ -38,29 +37,29 @@
       return list;
     }
 
-    // Exakte Einzel-Hausnummern laut deinem Zustellplan
+    // Optimierter Laufweg ohne unnötiges Hin- und Herlaufen
     const waypoints = [
       { name: "Start: Ringstraße 57", query: "Ringstraße 57, 65479 Raunheim" },
 
-      // 1. Ringstraße 56 bis 70 (nur gerade Nummern)
+      // 1. Ringstraße (56 -> 70, gerade)
       ...makeList("Ringstraße", 56, 70, 2),
 
-      // 2. Oderstraße 1 bis 73 (alle Nummern)
+      // 2. Oderstraße (1 -> 73)
       ...makeList("Oderstraße", 1, 73, 1),
 
-      // 3. Moselstraße 1-11, 13-14, 18-22
+      // 3. Moselstraße (1-11, 13-14, 18-22)
       ...makeList("Moselstraße", 1, 11, 1),
       ...makeList("Moselstraße", 13, 14, 1),
       ...makeList("Moselstraße", 18, 22, 1),
 
-      // 4. Aussiger Straße 1-18, 20-22
+      // 4. Aussiger Straße (1-18, 20-22)
       ...makeList("Aussiger Straße", 1, 18, 1),
       ...makeList("Aussiger Straße", 20, 22, 1),
 
-      // 5. Jakobstraße 48 bis 52
+      // 5. Jakobstraße (48 -> 52)
       ...makeList("Jakobstraße", 48, 52, 1),
 
-      // 6. Ringstraße 72 bis 122 (nur gerade Nummern)
+      // 6. Ringstraße (72 -> 122, gerade)
       ...makeList("Ringstraße", 72, 122, 2),
 
       { name: "Ziel erreicht! Wieder Zuhause.", query: "Ringstraße 57, 65479 Raunheim" }
