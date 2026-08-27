@@ -1,0 +1,23 @@
+{
+  "name": "Zeitung Austragen Raunheim",
+  "short_name": "Raunheim Route",
+  "description": "Optimierte Zeitungszustellungs-App mit Live-GPS und Pin-Korrektur",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#090d16",
+  "theme_color": "#090d16",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "https://raw.githubusercontent.com/twertt/Zeitung/main/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://raw.githubusercontent.com/twertt/Zeitung/main/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
