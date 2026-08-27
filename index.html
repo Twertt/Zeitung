@@ -25,16 +25,16 @@
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
-    // Exakt abgeglichene Daten laut deinem Zustellplan
+    // Exakte Koordinaten für Raunheim West (Ringstraße / Oderstraße)
     const waypoints = [
-      { name: "Start: Ringstraße 57", lat: 50.01018, lng: 8.45525 },
-      { name: "1. Ringstraße Hnr. 56 bis 70", lat: 50.01040, lng: 8.45540 },
-      { name: "2. Oderstraße Hnr. 1 bis 73", lat: 50.01120, lng: 8.45480 },
-      { name: "3. Moselstraße Hnr. 1 bis 11, 13 bis 14 und 18 bis 22", lat: 50.01185, lng: 8.45550 },
-      { name: "4. Aussiger Straße Hnr. 1 bis 18 und 20 bis 22", lat: 50.01210, lng: 8.45630 },
-      { name: "5. Jakobstraße Hnr. 48 bis 52", lat: 50.01160, lng: 8.45690 },
-      { name: "6. Ringstraße Hnr. 72 bis 122", lat: 50.01090, lng: 8.45660 },
-      { name: "Ziel erreicht! Wieder Zuhause.", lat: 50.01018, lng: 8.45525 }
+      { name: "Start: Ringstraße 57", lat: 50.01210, lng: 8.44420 },
+      { name: "1. Ringstraße Hnr. 56 bis 70", lat: 50.01230, lng: 8.44440 },
+      { name: "2. Oderstraße Hnr. 1 bis 73", lat: 50.01340, lng: 8.44350 },
+      { name: "3. Moselstraße Hnr. 1 bis 11, 13 bis 14 und 18 bis 22", lat: 50.01370, lng: 8.44460 },
+      { name: "4. Aussiger Straße Hnr. 1 bis 18 und 20 bis 22", lat: 50.01420, lng: 8.44550 },
+      { name: "5. Jakobstraße Hnr. 48 bis 52", lat: 50.01380, lng: 8.44630 },
+      { name: "6. Ringstraße Hnr. 72 bis 122", lat: 50.01290, lng: 8.44520 },
+      { name: "Ziel erreicht! Wieder Zuhause.", lat: 50.01210, lng: 8.44420 }
     ];
 
     let currentStep = -1;
@@ -42,7 +42,8 @@
     let speechSynth = window.speechSynthesis;
 
     function initMap() {
-      map = L.map('map').setView([50.0108, 8.4558], 17);
+      // Zentrierung exakt auf dein Wohngebiet
+      map = L.map('map').setView([50.01250, 8.44450], 17);
 
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap'
