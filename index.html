@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Zeitung Austragen - Raunheim West</title>
+  <title>Zeitung Austragen - Raunheim Nord/West</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
     body { margin: 0; padding: 0; font-family: sans-serif; display: flex; flex-direction: column; height: 100vh; }
@@ -27,7 +27,7 @@
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
-    // Berechnet für jede Hausnummer entlang eines Straßenzugs eine eigene exakte GPS-Koordinate
+    // Berechnet flüssige GPS-Punkte entlang der echten Straßen im Viertel
     function buildInterpolatedRoute(street, numbers, startLat, startLng, endLat, endLng) {
       const count = numbers.length;
       return numbers.map((num, idx) => {
@@ -52,35 +52,35 @@
       return res;
     }
 
-    // Exakter Routenverlauf in Raunheim West (Ringstraße / Oderstraße / Moselstraße / Aussiger Str. / Jakobstr.)
+    // Exakte Viertel-Koordinaten (Raunheim Nord-West: Ringstraße, Oderstraße, Moselstraße)
     const addressList = [
-      { name: "Start: Ringstraße 57", lat: 50.01040, lng: 8.44080 },
+      { name: "Start: Ringstraße 57", lat: 50.01630, lng: 8.44350 },
 
       // 1. Ringstraße Hnr. 56 -> 70 (gerade)
-      ...buildInterpolatedRoute("Ringstraße", makeRange(56, 70, 2), 50.01050, 8.44090, 50.01120, 8.44020),
+      ...buildInterpolatedRoute("Ringstraße", makeRange(56, 70, 2), 50.01640, 8.44380, 50.01680, 8.44460),
 
       // 2. Oderstraße: Ungerade hoch (1 -> 73)
-      ...buildInterpolatedRoute("Oderstraße", makeRange(1, 73, 2), 50.01090, 8.44060, 50.01350, 8.44350),
+      ...buildInterpolatedRoute("Oderstraße", makeRange(1, 73, 2), 50.01670, 8.44250, 50.01820, 8.44320),
       // Oderstraße: Gerade zurück (72 -> 2)
-      ...buildInterpolatedRoute("Oderstraße", makeRange(72, 2, 2), 50.01352, 8.44370, 50.01092, 8.44080),
+      ...buildInterpolatedRoute("Oderstraße", makeRange(72, 2, 2), 50.01822, 8.44340, 50.01672, 8.44270),
 
       // 3. Moselstraße: Ungerade hin (1 -> 21)
-      ...buildInterpolatedRoute("Moselstraße", [1, 3, 5, 7, 9, 11, 13, 19, 21], 50.01180, 8.44200, 50.01320, 8.44360),
+      ...buildInterpolatedRoute("Moselstraße", [1, 3, 5, 7, 9, 11, 13, 19, 21], 50.01700, 8.44360, 50.01800, 8.44440),
       // Moselstraße: Gerade zurück (22 -> 2)
-      ...buildInterpolatedRoute("Moselstraße", [22, 20, 18, 14, 10, 8, 6, 4, 2], 50.01322, 8.44380, 50.01182, 8.44220),
+      ...buildInterpolatedRoute("Moselstraße", [22, 20, 18, 14, 10, 8, 6, 4, 2], 50.01802, 8.44460, 50.01702, 8.44380),
 
       // 4. Aussiger Straße: Ungerade hin (1 -> 21)
-      ...buildInterpolatedRoute("Aussiger Straße", [1, 3, 5, 7, 9, 11, 13, 15, 17, 21], 50.01240, 8.44350, 50.01380, 8.44520),
+      ...buildInterpolatedRoute("Aussiger Straße", [1, 3, 5, 7, 9, 11, 13, 15, 17, 21], 50.01730, 8.44460, 50.01820, 8.44540),
       // Aussiger Straße: Gerade zurück (22 -> 2)
-      ...buildInterpolatedRoute("Aussiger Straße", [22, 20, 18, 16, 14, 12, 10, 8, 6, 4, 2], 50.01382, 8.44540, 50.01242, 8.44370),
+      ...buildInterpolatedRoute("Aussiger Straße", [22, 20, 18, 16, 14, 12, 10, 8, 6, 4, 2], 50.01822, 8.44560, 50.01732, 8.44480),
 
       // 5. Jakobstraße (48 -> 52)
-      ...buildInterpolatedRoute("Jakobstraße", makeRange(48, 52, 1), 50.01340, 8.44600, 50.01370, 8.44650),
+      ...buildInterpolatedRoute("Jakobstraße", makeRange(48, 52, 1), 50.01650, 8.44580, 50.01690, 8.44640),
 
-      // 6. Ringstraße (72 -> 122, gerade zurück)
-      ...buildInterpolatedRoute("Ringstraße", makeRange(72, 122, 2), 50.01320, 8.44620, 50.01060, 8.44120),
+      // 6. Ringstraße (72 -> 122, gerade zurück nach Hause)
+      ...buildInterpolatedRoute("Ringstraße", makeRange(72, 122, 2), 50.01680, 8.44500, 50.01620, 8.44380),
 
-      { name: "Ziel erreicht! Wieder Zuhause.", lat: 50.01040, lng: 8.44080 }
+      { name: "Ziel erreicht! Wieder Zuhause.", lat: 50.01630, lng: 8.44350 }
     ];
 
     let currentStep = -1;
@@ -88,7 +88,7 @@
     let speechSynth = window.speechSynthesis;
 
     function initMap() {
-      map = L.map('map').setView([50.01040, 8.44080], 18);
+      map = L.map('map').setView([50.01630, 8.44350], 18);
 
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap'
