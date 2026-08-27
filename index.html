@@ -3,23 +3,25 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Zeitung Austragen - Raunheim Route v14</title>
+  <title>Zeitung Austragen - Raunheim Route v15</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
     body { margin: 0; padding: 0; font-family: sans-serif; display: flex; flex-direction: column; height: 100vh; }
-    #info-box { background: #1e293b; color: white; padding: 12px 15px; text-align: center; z-index: 1000; max-height: 45vh; overflow-y: auto; }
+    #info-box { background: #1e293b; color: white; padding: 12px 15px; text-align: center; z-index: 1000; max-height: 48vh; overflow-y: auto; }
     #next-step { font-size: 1.1rem; font-weight: bold; margin-bottom: 2px; color: #facc15; }
-    #note-display { font-size: 0.85rem; margin-bottom: 8px; text-align: left; background: #334155; padding: 8px; border-radius: 6px; max-height: 90px; overflow-y: auto; }
+    #note-display { font-size: 0.85rem; margin-bottom: 8px; text-align: left; background: #334155; padding: 8px; border-radius: 6px; max-height: 80px; overflow-y: auto; }
     .party-item { padding: 3px 0; border-bottom: 1px solid #475569; display: flex; justify-content: space-between; align-items: center; }
     .party-item:last-child { border-bottom: none; }
-    #progress { font-size: 0.75rem; color: #94a3b8; margin-bottom: 8px; }
-    .btn-group { display: flex; gap: 8px; justify-content: center; width: 100%; max-width: 360px; margin: 0 auto 8px auto; }
+    #progress { font-size: 0.75rem; color: #94a3b8; margin-bottom: 6px; }
+    .btn-group { display: flex; gap: 8px; justify-content: center; width: 100%; max-width: 360px; margin: 0 auto 6px auto; }
     .nav-btn { flex: 1; padding: 10px; font-size: 0.95rem; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; color: white; touch-action: manipulation; }
     #prev-btn { background: #475569; }
     #prev-btn:disabled { opacity: 0.3; cursor: not-allowed; }
     #next-btn { background: #16a34a; }
     #next-btn:disabled { background: #475569; cursor: not-allowed; }
-    .note-actions { display: flex; gap: 5px; justify-content: center; margin-bottom: 6px; flex-wrap: wrap; }
+    .route-edit-group { display: flex; gap: 5px; justify-content: center; margin-bottom: 6px; }
+    .edit-btn { background: #334155; color: #facc15; border: 1px solid #475569; border-radius: 6px; padding: 5px 10px; font-size: 0.75rem; cursor: pointer; font-weight: bold; }
+    .note-actions { display: flex; gap: 5px; justify-content: center; margin-bottom: 4px; flex-wrap: wrap; }
     .note-btn { background: #334155; color: white; border: 1px solid #475569; border-radius: 6px; padding: 5px 8px; font-size: 0.7rem; cursor: pointer; }
     .note-btn.no { background: #dc2626; border-color: #ef4444; }
     .note-btn.yes { background: #16a34a; border-color: #22c55e; }
@@ -33,16 +35,24 @@
     <div id="next-step">Lade Gebäude-Koordinaten...</div>
     <div id="note-display">Keine Notizen für Parteien hinterlegt.</div>
     <div id="progress">Bitte einen Moment Geduld</div>
+    
     <div class="btn-group">
       <button id="prev-btn" class="nav-btn" type="button" onclick="prevWaypoint()" disabled>⬅ Zurück</button>
       <button id="next-btn" class="nav-btn" type="button" onclick="nextWaypoint()">Weiter ➔</button>
     </div>
+
+    <!-- Steuerung zum Verschieben der aktuellen Station -->
+    <div class="route-edit-group">
+      <button class="edit-btn" type="button" onclick="moveCurrentWaypoint(-1)">⬆ Station vorziehen</button>
+      <button class="edit-btn" type="button" onclick="moveCurrentWaypoint(1)">⬇ Station nach hinten</button>
+    </div>
+
     <div class="note-actions">
       <button class="note-btn no" type="button" onclick="addPartyNote('🚫 Partei: Keine Werbung')">+ 🚫 Partei (Keine Werbung)</button>
       <button class="note-btn yes" type="button" onclick="addPartyNote('📬 Partei: Werbung OK')">+ 📬 Partei (Werbung)</button>
-      <button class="note-btn" type="button" onclick="clearCurrentNotes()">🗑️ Alle Notizen hier löschen</button>
+      <button class="note-btn" type="button" onclick="clearCurrentNotes()">🗑️ Notizen löschen</button>
     </div>
-    <div><button id="reset-btn" type="button" onclick="clearRouteCache()">Daten neu laden</button></div>
+    <div><button id="reset-btn" type="button" onclick="clearRouteCache()">Standard-Route wiederherstellen</button></div>
   </div>
 
   <div id="map"></div>
@@ -80,14 +90,15 @@
     }
 
     async function loadRouteData() {
-      const savedNotes = localStorage.getItem('raunheim_route_parties_v14');
+      const savedNotes = localStorage.getItem('raunheim_route_parties_v15');
       if (savedNotes) {
         customNotes = JSON.parse(savedNotes);
       }
 
-      const cached = localStorage.getItem('raunheim_exact_route_v14');
-      if (cached) {
-        waypoints = JSON.parse(cached);
+      // Prüfen ob eine veränderte Reihenfolge gespeichert ist
+      const savedWaypoints = localStorage.getItem('raunheim_custom_waypoints_v15');
+      if (savedWaypoints) {
+        waypoints = JSON.parse(savedWaypoints);
         startApp();
         return;
       }
@@ -176,12 +187,12 @@
             ? "Ziel erreicht! Wieder Zuhause." 
             : `${section.street} ${num}`;
 
-          const keyId = `${section.street}_${num}`;
+          const keyId = `${section.street}_${num}_` + Math.random().toString(36).substr(2, 5);
           waypoints.push({ id: keyId, name: label, lat: coords.lat, lng: coords.lng });
         });
       });
 
-      localStorage.setItem('raunheim_exact_route_v14', JSON.stringify(waypoints));
+      localStorage.setItem('raunheim_custom_waypoints_v15', JSON.stringify(waypoints));
       startApp();
     }
 
@@ -206,7 +217,6 @@
       if (parties.length > 0) {
         let html = "";
         parties.forEach((p, idx) => {
-          const color = p.includes("Keine") ? "#f87171" : "#4ade80";
           html += `<div class="party-item"><span>${p}</span> <button onclick="removePartyNote(${idx})" style="background:none; border:none; color:#94a3b8; cursor:pointer; font-size:0.7rem;">✕ löschen</button></div>`;
         });
         noteEl.innerHTML = html;
@@ -225,6 +235,21 @@
       document.getElementById('next-btn').disabled = (currentStep === waypoints.length - 1);
     }
 
+    function moveCurrentWaypoint(direction) {
+      const targetIndex = currentStep + direction;
+      if (targetIndex < 0 || targetIndex >= waypoints.length) return;
+
+      // Element im Array verschieben
+      const item = waypoints.splice(currentStep, 1)[0];
+      waypoints.splice(targetIndex, 0, item);
+
+      // Neue Reihenfolge speichern
+      localStorage.setItem('raunheim_custom_waypoints_v15', JSON.stringify(waypoints));
+
+      // Zu neuer Position springen
+      showStep(targetIndex);
+    }
+
     function addPartyNote(noteText) {
       const item = waypoints[currentStep];
       if (!item) return;
@@ -233,11 +258,10 @@
         customNotes[item.id] = [];
       }
       
-      // Optional: Partei-Nummer automatisch vergeben
       const partyNum = customNotes[item.id].length + 1;
       customNotes[item.id].push(`Partei ${partyNum}: ${noteText.replace('Partei: ', '')}`);
 
-      localStorage.setItem('raunheim_route_parties_v14', JSON.stringify(customNotes));
+      localStorage.setItem('raunheim_route_parties_v15', JSON.stringify(customNotes));
       showStep(currentStep);
     }
 
@@ -250,7 +274,7 @@
         delete customNotes[item.id];
       }
 
-      localStorage.setItem('raunheim_route_parties_v14', JSON.stringify(customNotes));
+      localStorage.setItem('raunheim_route_parties_v15', JSON.stringify(customNotes));
       showStep(currentStep);
     }
 
@@ -259,7 +283,7 @@
       if (!item) return;
 
       delete customNotes[item.id];
-      localStorage.setItem('raunheim_route_parties_v14', JSON.stringify(customNotes));
+      localStorage.setItem('raunheim_route_parties_v15', JSON.stringify(customNotes));
       showStep(currentStep);
     }
 
@@ -276,8 +300,8 @@
     }
 
     function clearRouteCache() {
-      localStorage.removeItem('raunheim_exact_route_v14');
-      localStorage.removeItem('raunheim_route_parties_v14');
+      localStorage.removeItem('raunheim_custom_waypoints_v15');
+      localStorage.removeItem('raunheim_route_parties_v15');
       location.reload();
     }
 
