@@ -3,17 +3,21 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Zeitung Austragen - Raunheim Exakt</title>
+  <title>Zeitung Austragen - Raunheim Route</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
     body { margin: 0; padding: 0; font-family: sans-serif; display: flex; flex-direction: column; height: 100vh; }
     #info-box { background: #1e293b; color: white; padding: 15px; text-align: center; z-index: 1000; }
     #next-step { font-size: 1.2rem; font-weight: bold; margin-bottom: 5px; color: #facc15; }
-    #progress { font-size: 0.85rem; color: #94a3b8; margin-bottom: 10px; }
-    #confirm-btn { background: #16a34a; color: white; border: none; padding: 14px 20px; font-size: 1.1rem; border-radius: 8px; width: 100%; max-width: 320px; font-weight: bold; cursor: pointer; }
-    #confirm-btn:disabled { background: #475569; cursor: not-allowed; }
+    #progress { font-size: 0.85rem; color: #94a3b8; margin-bottom: 12px; }
+    .btn-group { display: flex; gap: 10px; justify-content: center; width: 100%; max-width: 360px; margin: 0 auto; }
+    .nav-btn { flex: 1; padding: 14px 10px; font-size: 1rem; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; color: white; }
+    #prev-btn { background: #475569; }
+    #prev-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    #next-btn { background: #16a34a; }
+    #next-btn:disabled { background: #475569; cursor: not-allowed; }
     #map { flex: 1; width: 100%; }
-    #reset-btn { background: transparent; color: #64748b; border: none; font-size: 0.75rem; text-decoration: underline; margin-top: 6px; cursor: pointer; }
+    #reset-btn { background: transparent; color: #64748b; border: none; font-size: 0.75rem; text-decoration: underline; margin-top: 8px; cursor: pointer; }
   </style>
 </head>
 <body>
@@ -21,7 +25,10 @@
   <div id="info-box">
     <div id="next-step">Lade Gebäude-Koordinaten...</div>
     <div id="progress">Bitte einen Moment Geduld</div>
-    <button id="confirm-btn" onclick="nextWaypoint()" disabled>Route wird geladen...</button>
+    <div class="btn-group">
+      <button id="prev-btn" class="nav-btn" onclick="prevWaypoint()" disabled>⬅ Zurück</button>
+      <button id="next-btn" class="nav-btn" onclick="nextWaypoint()" disabled>Weiter ➔</button>
+    </div>
     <div><button id="reset-btn" onclick="clearRouteCache()">Daten neu laden</button></div>
   </div>
 
@@ -33,6 +40,14 @@
     let speechSynth = window.speechSynthesis;
     let waypoints = [];
     let currentStep = -1;
+
+    // Manuelle Korrekturen für Hausnummern, die in OSM fehlen oder ungenau platziert sind
+    const manualOverrides = {
+      "oderstr|61": { lat: 50.01785, lng: 8.44310 },
+      "oderstr|63": { lat: 50.01793, lng: 8.44315 },
+      "oderstr|65": { lat: 50.01801, lng: 8.44320 },
+      "oderstr|67": { lat: 50.01809, lng: 8.44325 }
+    };
 
     // Gewünschte Austrag-Reihenfolge
     const deliveryPlan = [
@@ -64,7 +79,7 @@
     }
 
     async function loadRouteData() {
-      const cached = localStorage.getItem('raunheim_exact_route_v3');
+      const cached = localStorage.getItem('raunheim_exact_route_v4');
       if (cached) {
         waypoints = JSON.parse(cached);
         startApp();
@@ -118,12 +133,18 @@
 
         section.nums.forEach(num => {
           let coords = null;
+          const overrideKey = `${sKey}|${num}`;
 
-          // 1. Exakter Treffer in OpenStreetMap
-          if (streetMap[num]) {
+          // 1. Priorität: Manuelle Exakt-Korrektur
+          if (manualOverrides[overrideKey]) {
+            coords = manualOverrides[overrideKey];
+          } 
+          // 2. Priorität: Exakter Treffer aus OpenStreetMap
+          else if (streetMap[num]) {
             coords = streetMap[num];
-          } else {
-            // 2. Präzise Interpolation zwischen den nächsten vorhandenen Nachbarhäusern der gleichen Straße
+          } 
+          // 3. Priorität: Interpolation zwischen direkten Nachbarn der Straße
+          else {
             const knownNums = Object.keys(streetMap).map(Number).sort((a,b) => a - b);
             let lower = null, higher = null;
 
@@ -143,7 +164,7 @@
             } else if (higher !== null) {
               coords = streetMap[higher];
             } else {
-              coords = { lat: 50.0145, lng: 8.4440 }; // Fallback
+              coords = { lat: 50.0145, lng: 8.4440 };
             }
           }
 
@@ -155,16 +176,15 @@
         });
       });
 
-      localStorage.setItem('raunheim_exact_route_v3', JSON.stringify(waypoints));
+      localStorage.setItem('raunheim_exact_route_v4', JSON.stringify(waypoints));
       startApp();
     }
 
     function startApp() {
-      const btn = document.getElementById('confirm-btn');
-      btn.disabled = false;
-      btn.innerText = "Route Starten / Weiter ➔";
+      const nextBtn = document.getElementById('next-btn');
+      nextBtn.disabled = false;
       document.getElementById('next-step').innerText = "Bereit zum Starten!";
-      document.getElementById('progress').innerText = `${waypoints.length} Hausnummern exakt geladen`;
+      document.getElementById('progress').innerText = `${waypoints.length} Hausnummern bereit`;
 
       if (waypoints.length > 0) {
         map.setView([waypoints[0].lat, waypoints[0].lng], 18);
@@ -172,7 +192,7 @@
     }
 
     function clearRouteCache() {
-      localStorage.removeItem('raunheim_exact_route_v3');
+      localStorage.removeItem('raunheim_exact_route_v4');
       location.reload();
     }
 
@@ -220,19 +240,35 @@
       }
     }
 
+    function updateWaypointUI() {
+      if (currentStep < 0 || currentStep >= waypoints.length) return;
+
+      const item = waypoints[currentStep];
+
+      document.getElementById('next-step').innerText = item.name;
+      document.getElementById('progress').innerText = `Station ${currentStep + 1} von ${waypoints.length}`;
+      speak(item.name);
+
+      if (targetMarker) map.removeLayer(targetMarker);
+      
+      targetMarker = L.marker([item.lat, item.lng]).addTo(map).bindPopup(item.name).openPopup();
+      map.setView([item.lat, item.lng], 18);
+
+      document.getElementById('prev-btn').disabled = (currentStep <= 0);
+      document.getElementById('next-btn').disabled = (currentStep >= waypoints.length - 1);
+    }
+
     function nextWaypoint() {
       if (currentStep < waypoints.length - 1) {
         currentStep++;
-        const item = waypoints[currentStep];
+        updateWaypointUI();
+      }
+    }
 
-        document.getElementById('next-step').innerText = item.name;
-        document.getElementById('progress').innerText = `Station ${currentStep + 1} von ${waypoints.length}`;
-        speak(item.name);
-
-        if (targetMarker) map.removeLayer(targetMarker);
-        
-        targetMarker = L.marker([item.lat, item.lng]).addTo(map).bindPopup(item.name).openPopup();
-        map.setView([item.lat, item.lng], 18);
+    function prevWaypoint() {
+      if (currentStep > 0) {
+        currentStep--;
+        updateWaypointUI();
       }
     }
 
