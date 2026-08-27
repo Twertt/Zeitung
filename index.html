@@ -3,56 +3,249 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Zeitung Austragen - Raunheim Route v15</title>
+  <title>Zeitung Austragen - Raunheim Route v16</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
-    body { margin: 0; padding: 0; font-family: sans-serif; display: flex; flex-direction: column; height: 100vh; }
-    #info-box { background: #1e293b; color: white; padding: 12px 15px; text-align: center; z-index: 1000; max-height: 48vh; overflow-y: auto; }
-    #next-step { font-size: 1.1rem; font-weight: bold; margin-bottom: 2px; color: #facc15; }
-    #note-display { font-size: 0.85rem; margin-bottom: 8px; text-align: left; background: #334155; padding: 8px; border-radius: 6px; max-height: 80px; overflow-y: auto; }
-    .party-item { padding: 3px 0; border-bottom: 1px solid #475569; display: flex; justify-content: space-between; align-items: center; }
+    :root {
+      --bg-main: #0f172a;
+      --bg-card: rgba(30, 41, 59, 0.85);
+      --bg-card-solid: #1e293b;
+      --accent: #38bdf8;
+      --accent-gradient: linear-gradient(135deg, #38bdf8 0%, #818cf8 100%);
+      --success: #10b981;
+      --danger: #f43f5e;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --border: rgba(255, 255, 255, 0.08);
+      --radius: 16px;
+      --shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.4);
+    }
+
+    * { box-sizing: border-box; }
+    body { 
+      margin: 0; 
+      padding: 0; 
+      font-family: 'Plus Jakarta Sans', sans-serif; 
+      display: flex; 
+      flex-direction: column; 
+      height: 100vh; 
+      background-color: var(--bg-main);
+      color: var(--text-main);
+      overflow: hidden;
+    }
+
+    #info-box { 
+      background: var(--bg-card);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 20px; 
+      z-index: 1000; 
+      max-height: 52vh; 
+      overflow-y: auto; 
+      box-shadow: var(--shadow);
+    }
+
+    .header-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+
+    #progress { 
+      font-size: 0.75rem; 
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--accent); 
+    }
+
+    #mode-badge {
+      font-size: 0.7rem;
+      font-weight: 700;
+      background: rgba(56, 189, 248, 0.15);
+      color: var(--accent);
+      padding: 3px 8px;
+      border-radius: 20px;
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      display: none;
+    }
+    #mode-badge.active { display: inline-block; animation: pulse 1.5s infinite; }
+
+    @keyframes pulse {
+      0% { opacity: 1; }
+      50% { opacity: 0.5; }
+      100% { opacity: 1; }
+    }
+
+    #next-step { 
+      font-size: 1.25rem; 
+      font-weight: 800; 
+      margin-bottom: 8px; 
+      color: #fff; 
+      letter-spacing: -0.01em;
+    }
+
+    #note-display { 
+      font-size: 0.85rem; 
+      margin-bottom: 12px; 
+      text-align: left; 
+      background: rgba(15, 23, 42, 0.6); 
+      border: 1px solid var(--border);
+      padding: 10px 12px; 
+      border-radius: 10px; 
+      max-height: 90px; 
+      overflow-y: auto; 
+    }
+
+    .party-item { 
+      padding: 4px 0; 
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05); 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: center; 
+    }
     .party-item:last-child { border-bottom: none; }
-    #progress { font-size: 0.75rem; color: #94a3b8; margin-bottom: 6px; }
-    .btn-group { display: flex; gap: 8px; justify-content: center; width: 100%; max-width: 360px; margin: 0 auto 6px auto; }
-    .nav-btn { flex: 1; padding: 10px; font-size: 0.95rem; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; color: white; touch-action: manipulation; }
-    #prev-btn { background: #475569; }
+
+    .btn-group { 
+      display: flex; 
+      gap: 10px; 
+      justify-content: center; 
+      width: 100%; 
+      margin: 0 auto 10px auto; 
+    }
+    
+    .nav-btn { 
+      flex: 1; 
+      padding: 12px; 
+      font-size: 0.95rem; 
+      border-radius: 12px; 
+      border: none; 
+      font-weight: 700; 
+      cursor: pointer; 
+      color: white; 
+      touch-action: manipulation; 
+      transition: transform 0.1s ease, filter 0.2s;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+    .nav-btn:active { transform: scale(0.97); }
+    #prev-btn { background: #334155; border: 1px solid var(--border); }
     #prev-btn:disabled { opacity: 0.3; cursor: not-allowed; }
-    #next-btn { background: #16a34a; }
-    #next-btn:disabled { background: #475569; cursor: not-allowed; }
-    .route-edit-group { display: flex; gap: 5px; justify-content: center; margin-bottom: 6px; }
-    .edit-btn { background: #334155; color: #facc15; border: 1px solid #475569; border-radius: 6px; padding: 5px 10px; font-size: 0.75rem; cursor: pointer; font-weight: bold; }
-    .note-actions { display: flex; gap: 5px; justify-content: center; margin-bottom: 4px; flex-wrap: wrap; }
-    .note-btn { background: #334155; color: white; border: 1px solid #475569; border-radius: 6px; padding: 5px 8px; font-size: 0.7rem; cursor: pointer; }
-    .note-btn.no { background: #dc2626; border-color: #ef4444; }
-    .note-btn.yes { background: #16a34a; border-color: #22c55e; }
-    #map { flex: 1; width: 100%; }
-    #reset-btn { background: transparent; color: #64748b; border: none; font-size: 0.7rem; text-decoration: underline; margin-top: 4px; cursor: pointer; }
+    #next-btn { background: var(--accent-gradient); color: #0f172a; font-weight: 800; }
+    #next-btn:disabled { background: #334155; color: var(--text-muted); cursor: not-allowed; }
+
+    .toolbar {
+      display: flex;
+      gap: 6px;
+      justify-content: center;
+      margin-bottom: 8px;
+      flex-wrap: wrap;
+    }
+
+    .tool-btn {
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text-main);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 7px 12px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .tool-btn:hover { background: rgba(255, 255, 255, 0.1); }
+    .tool-btn.highlight { border-color: var(--accent); color: var(--accent); }
+    .tool-btn.active-pin-mode { background: var(--accent); color: #0f172a; font-weight: 700; border-color: var(--accent); }
+
+    .note-actions { 
+      display: flex; 
+      gap: 6px; 
+      justify-content: center; 
+      margin-bottom: 6px; 
+      flex-wrap: wrap; 
+    }
+    
+    .note-btn { 
+      background: rgba(255, 255, 255, 0.05); 
+      color: var(--text-main); 
+      border: 1px solid var(--border); 
+      border-radius: 10px; 
+      padding: 7px 12px; 
+      font-size: 0.75rem; 
+      font-weight: 600;
+      cursor: pointer; 
+      transition: background 0.2s;
+    }
+    .note-btn.no { background: rgba(244, 63, 94, 0.15); border-color: rgba(244, 63, 94, 0.4); color: #fda4af; }
+    .note-btn.yes { background: rgba(16, 185, 129, 0.15); border-color: rgba(16, 185, 129, 0.4); color: #6ee7b7; }
+
+    .footer-options {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 6px;
+      padding-top: 6px;
+      border-top: 1px solid var(--border);
+    }
+
+    #reset-btn { 
+      background: transparent; 
+      color: var(--text-muted); 
+      border: none; 
+      font-size: 0.7rem; 
+      cursor: pointer; 
+      font-weight: 500;
+    }
+    #reset-btn:hover { color: var(--text-main); text-decoration: underline; }
+
+    #map { flex: 1; width: 100%; z-index: 1; }
+
+    /* Custom Leaflet Dark UI Overrides */
+    .leaflet-popup-content-wrapper, .leaflet-popup-tip {
+      background: var(--bg-card-solid) !important;
+      color: var(--text-main) !important;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+    }
+    .leaflet-container { font-family: 'Plus Jakarta Sans', sans-serif !important; }
   </style>
 </head>
 <body>
 
   <div id="info-box">
-    <div id="next-step">Lade Gebäude-Koordinaten...</div>
-    <div id="note-display">Keine Notizen für Parteien hinterlegt.</div>
-    <div id="progress">Bitte einen Moment Geduld</div>
+    <div class="header-row">
+      <div id="progress">Lade Stationen...</div>
+      <div id="mode-badge">📍 Pin-Modus aktiv</div>
+    </div>
+    
+    <div id="next-step">Route wird initialisiert</div>
+    <div id="note-display"><span style='color: var(--text-muted);'>Keine Parteien-Notizen hinterlegt.</span></div>
     
     <div class="btn-group">
       <button id="prev-btn" class="nav-btn" type="button" onclick="prevWaypoint()" disabled>⬅ Zurück</button>
       <button id="next-btn" class="nav-btn" type="button" onclick="nextWaypoint()">Weiter ➔</button>
     </div>
 
-    <!-- Steuerung zum Verschieben der aktuellen Station -->
-    <div class="route-edit-group">
-      <button class="edit-btn" type="button" onclick="moveCurrentWaypoint(-1)">⬆ Station vorziehen</button>
-      <button class="edit-btn" type="button" onclick="moveCurrentWaypoint(1)">⬇ Station nach hinten</button>
+    <!-- Stylische Werkzeugleiste -->
+    <div class="toolbar">
+      <button class="tool-btn" type="button" onclick="moveCurrentWaypoint(-1)">⬆ Vorziehen</button>
+      <button class="tool-btn" type="button" onclick="moveCurrentWaypoint(1)">⬇ Nach hinten</button>
+      <button id="pin-mode-btn" class="tool-btn highlight" type="button" onclick="togglePinMode()">📍 Pin korrigieren</button>
     </div>
 
     <div class="note-actions">
-      <button class="note-btn no" type="button" onclick="addPartyNote('🚫 Partei: Keine Werbung')">+ 🚫 Partei (Keine Werbung)</button>
-      <button class="note-btn yes" type="button" onclick="addPartyNote('📬 Partei: Werbung OK')">+ 📬 Partei (Werbung)</button>
-      <button class="note-btn" type="button" onclick="clearCurrentNotes()">🗑️ Notizen löschen</button>
+      <button class="note-btn no" type="button" onclick="addPartyNote('🚫 Partei: Keine Werbung')">+ 🚫 Keine Werbung</button>
+      <button class="note-btn yes" type="button" onclick="addPartyNote('📬 Partei: Werbung OK')">+ 📬 Werbung OK</button>
+      <button class="note-btn" type="button" onclick="clearCurrentNotes()">🗑️ Löschen</button>
     </div>
-    <div><button id="reset-btn" type="button" onclick="clearRouteCache()">Standard-Route wiederherstellen</button></div>
+    
+    <div class="footer-options">
+      <button id="reset-btn" type="button" onclick="clearRouteCache()">Standard-Route wiederherstellen</button>
+      <span style="font-size: 0.7rem; color: var(--text-muted);">Raunheim v16</span>
+    </div>
   </div>
 
   <div id="map"></div>
@@ -63,6 +256,8 @@
     let waypoints = [];
     let currentStep = 0;
     let customNotes = {};
+    let customCoords = {};
+    let isPinCorrectionMode = false;
 
     const deliveryPlan = [
       { street: "Ringstraße", nums: [57] },
@@ -90,21 +285,22 @@
     }
 
     async function loadRouteData() {
-      const savedNotes = localStorage.getItem('raunheim_route_parties_v15');
-      if (savedNotes) {
-        customNotes = JSON.parse(savedNotes);
-      }
+      const savedNotes = localStorage.getItem('raunheim_route_parties_v16');
+      if (savedNotes) customNotes = JSON.parse(savedNotes);
 
-      // Prüfen ob eine veränderte Reihenfolge gespeichert ist
-      const savedWaypoints = localStorage.getItem('raunheim_custom_waypoints_v15');
+      const savedCoords = localStorage.getItem('raunheim_custom_coords_v16');
+      if (savedCoords) customCoords = JSON.parse(savedCoords);
+
+      const savedWaypoints = localStorage.getItem('raunheim_custom_waypoints_v16');
       if (savedWaypoints) {
         waypoints = JSON.parse(savedWaypoints);
+        applyCustomCoordsToWaypoints();
         startApp();
         return;
       }
 
-      document.getElementById('next-step').innerText = "Rufe reale Standorte ab...";
-      document.getElementById('progress').innerText = "Verbindung zu OpenStreetMap...";
+      document.getElementById('next-step').innerText = "Verbinde mit Kartendaten...";
+      document.getElementById('progress').innerText = "OpenStreetMap sync";
 
       const overpassQuery = `
         [out:json][timeout:25];
@@ -140,8 +336,8 @@
 
         buildExactWaypoints(osmMap);
       } catch (err) {
-        document.getElementById('next-step').innerText = "Netzwerkfehler beim Laden!";
-        document.getElementById('progress').innerText = "Bitte Seite neu laden.";
+        document.getElementById('next-step').innerText = "Fehler beim Laden!";
+        document.getElementById('progress').innerText = "Netzwerk prüfen";
       }
     }
 
@@ -188,12 +384,23 @@
             : `${section.street} ${num}`;
 
           const keyId = `${section.street}_${num}_` + Math.random().toString(36).substr(2, 5);
-          waypoints.push({ id: keyId, name: label, lat: coords.lat, lng: coords.lng });
+          waypoints.push({ id: keyId, street: section.street, num: num, name: label, lat: coords.lat, lng: coords.lng });
         });
       });
 
-      localStorage.setItem('raunheim_custom_waypoints_v15', JSON.stringify(waypoints));
+      applyCustomCoordsToWaypoints();
+      localStorage.setItem('raunheim_custom_waypoints_v16', JSON.stringify(waypoints));
       startApp();
+    }
+
+    function applyCustomCoordsToWaypoints() {
+      waypoints.forEach(wp => {
+        const coordinateKey = `${wp.street}_${wp.num}`;
+        if (customCoords[coordinateKey]) {
+          wp.lat = customCoords[coordinateKey].lat;
+          wp.lng = customCoords[coordinateKey].lng;
+        }
+      });
     }
 
     function startApp() {
@@ -217,11 +424,11 @@
       if (parties.length > 0) {
         let html = "";
         parties.forEach((p, idx) => {
-          html += `<div class="party-item"><span>${p}</span> <button onclick="removePartyNote(${idx})" style="background:none; border:none; color:#94a3b8; cursor:pointer; font-size:0.7rem;">✕ löschen</button></div>`;
+          html += `<div class="party-item"><span>${p}</span> <button onclick="removePartyNote(${idx})" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:0.7rem;">✕</button></div>`;
         });
         noteEl.innerHTML = html;
       } else {
-        noteEl.innerHTML = "<span style='color: #94a3b8;'>Keine Parteien-Notizen hinterlegt.</span>";
+        noteEl.innerHTML = "<span style='color: var(--text-muted);'>Keine Parteien-Notizen hinterlegt.</span>";
       }
 
       speak(item.name);
@@ -230,23 +437,37 @@
       
       targetMarker = L.marker([item.lat, item.lng]).addTo(map).bindPopup(item.name).openPopup();
       map.setView([item.lat, item.lng], 18);
+      
+      if (isPinCorrectionMode) {
+        togglePinMode(); // Automatisches Ausschalten nach Klickwechsel
+      }
 
       document.getElementById('prev-btn').disabled = (currentStep === 0);
       document.getElementById('next-btn').disabled = (currentStep === waypoints.length - 1);
+    }
+
+    function togglePinMode() {
+      isPinCorrectionMode = !isPinCorrectionMode;
+      const btn = document.getElementById('pin-mode-btn');
+      const badge = document.getElementById('mode-badge');
+      
+      if (isPinCorrectionMode) {
+        btn.classList.add('active-pin-mode');
+        badge.classList.add('active');
+      } else {
+        btn.classList.remove('active-pin-mode');
+        badge.classList.remove('active');
+      }
     }
 
     function moveCurrentWaypoint(direction) {
       const targetIndex = currentStep + direction;
       if (targetIndex < 0 || targetIndex >= waypoints.length) return;
 
-      // Element im Array verschieben
       const item = waypoints.splice(currentStep, 1)[0];
       waypoints.splice(targetIndex, 0, item);
 
-      // Neue Reihenfolge speichern
-      localStorage.setItem('raunheim_custom_waypoints_v15', JSON.stringify(waypoints));
-
-      // Zu neuer Position springen
+      localStorage.setItem('raunheim_custom_waypoints_v16', JSON.stringify(waypoints));
       showStep(targetIndex);
     }
 
@@ -254,14 +475,12 @@
       const item = waypoints[currentStep];
       if (!item) return;
 
-      if (!customNotes[item.id]) {
-        customNotes[item.id] = [];
-      }
+      if (!customNotes[item.id]) customNotes[item.id] = [];
       
       const partyNum = customNotes[item.id].length + 1;
       customNotes[item.id].push(`Partei ${partyNum}: ${noteText.replace('Partei: ', '')}`);
 
-      localStorage.setItem('raunheim_route_parties_v15', JSON.stringify(customNotes));
+      localStorage.setItem('raunheim_route_parties_v16', JSON.stringify(customNotes));
       showStep(currentStep);
     }
 
@@ -270,11 +489,9 @@
       if (!item || !customNotes[item.id]) return;
 
       customNotes[item.id].splice(index, 1);
-      if (customNotes[item.id].length === 0) {
-        delete customNotes[item.id];
-      }
+      if (customNotes[item.id].length === 0) delete customNotes[item.id];
 
-      localStorage.setItem('raunheim_route_parties_v15', JSON.stringify(customNotes));
+      localStorage.setItem('raunheim_route_parties_v16', JSON.stringify(customNotes));
       showStep(currentStep);
     }
 
@@ -283,34 +500,53 @@
       if (!item) return;
 
       delete customNotes[item.id];
-      localStorage.setItem('raunheim_route_parties_v15', JSON.stringify(customNotes));
+      localStorage.setItem('raunheim_route_parties_v16', JSON.stringify(customNotes));
       showStep(currentStep);
     }
 
     function nextWaypoint() {
-      if (currentStep < waypoints.length - 1) {
-        showStep(currentStep + 1);
-      }
+      if (currentStep < waypoints.length - 1) showStep(currentStep + 1);
     }
 
     function prevWaypoint() {
-      if (currentStep > 0) {
-        showStep(currentStep - 1);
-      }
+      if (currentStep > 0) showStep(currentStep - 1);
     }
 
     function clearRouteCache() {
-      localStorage.removeItem('raunheim_custom_waypoints_v15');
-      localStorage.removeItem('raunheim_route_parties_v15');
+      localStorage.removeItem('raunheim_custom_waypoints_v16');
+      localStorage.removeItem('raunheim_route_parties_v16');
+      localStorage.removeItem('raunheim_custom_coords_v16');
       location.reload();
     }
 
     function initMap() {
-      map = L.map('map').setView([50.0145, 8.4440], 18);
+      map = L.map('map', { zoomControl: false }).setView([50.0145, 8.4440], 18);
+      L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap'
+      // Stylisches Dark Map Theme (CartoDB Dark Matter)
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; OpenStreetMap &copy; CARTO',
+        maxZoom: 20
       }).addTo(map);
+
+      // Klick-Event für Pin-Verschiebung
+      map.on('click', function(e) {
+        if (!isPinCorrectionMode) return;
+        
+        const item = waypoints[currentStep];
+        if (!item) return;
+
+        item.lat = Number(e.latlng.lat.toFixed(6));
+        item.lng = Number(e.latlng.lng.toFixed(6));
+
+        // Dauerhaft speichern
+        const coordKey = `${item.street}_${item.num}`;
+        customCoords[coordKey] = { lat: item.lat, lng: item.lng };
+        localStorage.setItem('raunheim_custom_coords_v16', JSON.stringify(customCoords));
+        localStorage.setItem('raunheim_custom_waypoints_v16', JSON.stringify(waypoints));
+
+        showStep(currentStep);
+      });
 
       startGPS();
       loadRouteData();
@@ -325,16 +561,17 @@
 
             if (!userMarker) {
               userMarker = L.circleMarker([lat, lng], {
-                color: '#1d4ed8',
-                fillColor: '#3b82f6',
+                color: '#38bdf8',
+                fillColor: '#38bdf8',
                 fillOpacity: 0.9,
-                radius: 9
+                radius: 8,
+                weight: 3
               }).addTo(map).bindPopup("Dein Standort");
             } else {
               userMarker.setLatLng([lat, lng]);
             }
           },
-          (err) => console.log("GPS..."),
+          (err) => console.log("GPS Status..."),
           { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
         );
       }
@@ -349,7 +586,7 @@
           window.speechSynthesis.speak(utterance);
         }
       } catch (e) {
-        console.log("Sprachausgabe Fehler:", e);
+        console.log("Sprachausgabe:", e);
       }
     }
 
