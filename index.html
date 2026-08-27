@@ -27,16 +27,16 @@
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
-    // Feste, geprüfte Koordinaten für genau deine Straßen in Raunheim
+    // Hier kannst du die lat (Breitengrad) und lng (Längengrad) Werte anpassen, falls ein Punkt noch leicht abweicht:
     const waypoints = [
-      { name: "Start: Ringstraße 57", lat: 50.01252, lng: 8.44435 },
-      { name: "1. Ringstraße Hnr. 56 bis 70", lat: 50.01285, lng: 8.44470 },
-      { name: "2. Oderstraße Hnr. 1 bis 73", lat: 50.01315, lng: 8.44310 },
-      { name: "3. Moselstraße Hnr. 1 bis 22", lat: 50.01360, lng: 8.44425 },
-      { name: "4. Aussiger Straße Hnr. 1 bis 22", lat: 50.01395, lng: 8.44510 },
-      { name: "5. Jakobstraße Hnr. 48 bis 52", lat: 50.01365, lng: 8.44590 },
-      { name: "6. Ringstraße Hnr. 72 bis 122", lat: 50.01305, lng: 8.44520 },
-      { name: "Ziel erreicht! Wieder Zuhause.", lat: 50.01252, lng: 8.44435 }
+      { name: "Start: Ringstraße 57", lat: 50.0098, lng: 8.4495 },
+      { name: "1. Ringstraße Hnr. 56 bis 70", lat: 50.0102, lng: 8.4501 },
+      { name: "2. Oderstraße Hnr. 1 bis 73", lat: 50.0108, lng: 8.4490 },
+      { name: "3. Moselstraße Hnr. 1 bis 22", lat: 50.0114, lng: 8.4505 },
+      { name: "4. Aussiger Straße Hnr. 1 bis 22", lat: 50.0119, lng: 8.4512 },
+      { name: "5. Jakobstraße Hnr. 48 bis 52", lat: 50.0115, lng: 8.4520 },
+      { name: "6. Ringstraße Hnr. 72 bis 122", lat: 50.0106, lng: 8.4515 },
+      { name: "Ziel erreicht! Wieder Zuhause.", lat: 50.0098, lng: 8.4495 }
     ];
 
     let currentStep = -1;
@@ -44,8 +44,7 @@
     let speechSynth = window.speechSynthesis;
 
     function initMap() {
-      // Zentriert direkt auf dein Viertel
-      map = L.map('map').setView([50.0130, 8.4445], 17);
+      map = L.map('map').setView([waypoints[0].lat, waypoints[0].lng], 17);
 
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap'
