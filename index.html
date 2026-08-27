@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Zeitung Austragen - Raunheim Nord/West</title>
+  <title>Zeitung Austragen - Raunheim Echte Daten</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
     body { margin: 0; padding: 0; font-family: sans-serif; display: flex; flex-direction: column; height: 100vh; }
@@ -11,36 +11,26 @@
     #next-step { font-size: 1.2rem; font-weight: bold; margin-bottom: 5px; color: #facc15; }
     #progress { font-size: 0.85rem; color: #94a3b8; margin-bottom: 10px; }
     #confirm-btn { background: #16a34a; color: white; border: none; padding: 14px 20px; font-size: 1.1rem; border-radius: 8px; width: 100%; max-width: 320px; font-weight: bold; cursor: pointer; }
-    #confirm-btn:active { background: #15803d; }
+    #confirm-btn:disabled { background: #475569; cursor: not-allowed; }
     #map { flex: 1; width: 100%; }
   </style>
 </head>
 <body>
 
   <div id="info-box">
-    <div id="next-step">Klicke unten zum Starten</div>
-    <div id="progress">Bereit zur Austragung</div>
-    <button id="confirm-btn" onclick="nextWaypoint()">Route Starten / Weiter ➔</button>
+    <div id="next-step">Lade echte Hausnummern...</div>
+    <div id="progress">Bitte einen Moment Geduld</div>
+    <button id="confirm-btn" onclick="nextWaypoint()" disabled>Route wird geladen...</button>
   </div>
 
   <div id="map"></div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
-    // Berechnet flüssige GPS-Punkte entlang der echten Straßen im Viertel
-    function buildInterpolatedRoute(street, numbers, startLat, startLng, endLat, endLng) {
-      const count = numbers.length;
-      return numbers.map((num, idx) => {
-        const t = count > 1 ? idx / (count - 1) : 0;
-        const lat = startLat + t * (endLat - startLat);
-        const lng = startLng + t * (endLng - startLng);
-        return {
-          name: `${street} ${num}`,
-          lat: Number(lat.toFixed(6)),
-          lng: Number(lng.toFixed(6))
-        };
-      });
-    }
+    let map, userMarker, targetMarker;
+    let speechSynth = window.speechSynthesis;
+    let addressList = [];
+    let currentStep = -1;
 
     function makeRange(start, end, step = 1) {
       const res = [];
@@ -52,49 +42,105 @@
       return res;
     }
 
-    // Exakte Viertel-Koordinaten (Raunheim Nord-West: Ringstraße, Oderstraße, Moselstraße)
-    const addressList = [
-      { name: "Start: Ringstraße 57", lat: 50.01630, lng: 8.44350 },
-
-      // 1. Ringstraße Hnr. 56 -> 70 (gerade)
-      ...buildInterpolatedRoute("Ringstraße", makeRange(56, 70, 2), 50.01640, 8.44380, 50.01680, 8.44460),
-
-      // 2. Oderstraße: Ungerade hoch (1 -> 73)
-      ...buildInterpolatedRoute("Oderstraße", makeRange(1, 73, 2), 50.01670, 8.44250, 50.01820, 8.44320),
-      // Oderstraße: Gerade zurück (72 -> 2)
-      ...buildInterpolatedRoute("Oderstraße", makeRange(72, 2, 2), 50.01822, 8.44340, 50.01672, 8.44270),
-
-      // 3. Moselstraße: Ungerade hin (1 -> 21)
-      ...buildInterpolatedRoute("Moselstraße", [1, 3, 5, 7, 9, 11, 13, 19, 21], 50.01700, 8.44360, 50.01800, 8.44440),
-      // Moselstraße: Gerade zurück (22 -> 2)
-      ...buildInterpolatedRoute("Moselstraße", [22, 20, 18, 14, 10, 8, 6, 4, 2], 50.01802, 8.44460, 50.01702, 8.44380),
-
-      // 4. Aussiger Straße: Ungerade hin (1 -> 21)
-      ...buildInterpolatedRoute("Aussiger Straße", [1, 3, 5, 7, 9, 11, 13, 15, 17, 21], 50.01730, 8.44460, 50.01820, 8.44540),
-      // Aussiger Straße: Gerade zurück (22 -> 2)
-      ...buildInterpolatedRoute("Aussiger Straße", [22, 20, 18, 16, 14, 12, 10, 8, 6, 4, 2], 50.01822, 8.44560, 50.01732, 8.44480),
-
-      // 5. Jakobstraße (48 -> 52)
-      ...buildInterpolatedRoute("Jakobstraße", makeRange(48, 52, 1), 50.01650, 8.44580, 50.01690, 8.44640),
-
-      // 6. Ringstraße (72 -> 122, gerade zurück nach Hause)
-      ...buildInterpolatedRoute("Ringstraße", makeRange(72, 122, 2), 50.01680, 8.44500, 50.01620, 8.44380),
-
-      { name: "Ziel erreicht! Wieder Zuhause.", lat: 50.01630, lng: 8.44350 }
-    ];
-
-    let currentStep = -1;
-    let map, userMarker, targetMarker;
-    let speechSynth = window.speechSynthesis;
-
     function initMap() {
-      map = L.map('map').setView([50.01630, 8.44350], 18);
+      // Zentrierung auf Raunheim
+      map = L.map('map').setView([50.0145, 8.4440], 17);
 
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap'
       }).addTo(map);
 
       startGPS();
+      fetchRealOSMData();
+    }
+
+    // Lädt die echten Geodaten für Raunheim direkt aus der OpenStreetMap-Datenbank
+    async function fetchRealOSMData() {
+      const query = `
+        [out:json][timeout:15];
+        area["postal_code"="65479"]->.searchArea;
+        (
+          node["addr:street"](area.searchArea);
+          way["addr:street"](area.searchArea);
+        );
+        out center;
+      `;
+
+      try {
+        const response = await fetch("https://overpass-api.de/api/interpreter?data=" + encodeURIComponent(query));
+        const data = await response.json();
+        
+        const osmMap = {};
+        data.elements.forEach(el => {
+          const street = el.tags?.['addr:street'];
+          const hn = el.tags?.['addr:housenumber'];
+          const lat = el.lat || el.center?.lat;
+          const lon = el.lon || el.center?.lon;
+
+          if (street && hn && lat && lon) {
+            osmMap[`${street.trim().toLowerCase()}|${hn.trim()}`] = { lat, lng: lon };
+          }
+        });
+
+        buildRoute(osmMap);
+      } catch (e) {
+        document.getElementById('next-step').innerText = "Fehler beim Laden der Karten-Daten";
+      }
+    }
+
+    function getCoords(osmMap, street, num) {
+      const key = `${street.toLowerCase()}|${num}`;
+      if (osmMap[key]) return osmMap[key];
+
+      // Fallback-Koordinaten falls eine Hausnummer in OSM nicht separat eingezeichnet ist
+      const streetDefaults = {
+        "ringstraße": { lat: 50.0125, lng: 8.4443 },
+        "oderstraße": { lat: 50.0131, lng: 8.4431 },
+        "moselstraße": { lat: 50.0136, lng: 8.4442 },
+        "aussiger straße": { lat: 50.0139, lng: 8.4451 },
+        "jakobstraße": { lat: 50.0136, lng: 8.4459 }
+      };
+      return streetDefaults[street.toLowerCase()] || { lat: 50.0145, lng: 8.4440 };
+    }
+
+    function buildRoute(osmMap) {
+      const rawRoute = [
+        { name: "Start: Ringstraße 57", street: "Ringstraße", num: 57 },
+
+        // 1. Ringstraße (56 bis 70 - gerade)
+        ...makeRange(56, 70, 2).map(n => ({ name: `Ringstraße ${n}`, street: "Ringstraße", num: n })),
+
+        // 2. Oderstraße: Ungerade hin (1-73), Gerade zurück (72-2)
+        ...makeRange(1, 73, 2).map(n => ({ name: `Oderstraße ${n}`, street: "Oderstraße", num: n })),
+        ...makeRange(72, 2, 2).map(n => ({ name: `Oderstraße ${n}`, street: "Oderstraße", num: n })),
+
+        // 3. Moselstraße: Ungerade hin, Gerade zurück
+        ...[1, 3, 5, 7, 9, 11, 13, 19, 21].map(n => ({ name: `Moselstraße ${n}`, street: "Moselstraße", num: n })),
+        ...[22, 20, 18, 14, 10, 8, 6, 4, 2].map(n => ({ name: `Moselstraße ${n}`, street: "Moselstraße", num: n })),
+
+        // 4. Aussiger Straße: Ungerade hin, Gerade zurück
+        ...[1, 3, 5, 7, 9, 11, 13, 15, 17, 21].map(n => ({ name: `Aussiger Straße ${n}`, street: "Aussiger Straße", num: n })),
+        ...[22, 20, 18, 16, 14, 12, 10, 8, 6, 4, 2].map(n => ({ name: `Aussiger Straße ${n}`, street: "Aussiger Straße", num: n })),
+
+        // 5. Jakobstraße (48 bis 52)
+        ...makeRange(48, 52, 1).map(n => ({ name: `Jakobstraße ${n}`, street: "Jakobstraße", num: n })),
+
+        // 6. Ringstraße (72 bis 122 - gerade zurück)
+        ...makeRange(72, 122, 2).map(n => ({ name: `Ringstraße ${n}`, street: "Ringstraße", num: n })),
+
+        { name: "Ziel erreicht! Wieder Zuhause.", street: "Ringstraße", num: 57 }
+      ];
+
+      addressList = rawRoute.map(item => {
+        const coords = getCoords(osmMap, item.street, item.num);
+        return { name: item.name, lat: coords.lat, lng: coords.lng };
+      });
+
+      const btn = document.getElementById('confirm-btn');
+      btn.disabled = false;
+      btn.innerText = "Route Starten / Weiter ➔";
+      document.getElementById('next-step').innerText = "Bereit zum Starten!";
+      document.getElementById('progress').innerText = `${addressList.length} Haltepunkte geladen`;
     }
 
     function startGPS() {
@@ -136,7 +182,7 @@
         const item = addressList[currentStep];
 
         document.getElementById('next-step').innerText = item.name;
-        document.getElementById('progress').innerText = `Haus ${currentStep + 1} von ${addressList.length}`;
+        document.getElementById('progress').innerText = `Station ${currentStep + 1} von ${addressList.length}`;
         speak(item.name);
 
         if (targetMarker) map.removeLayer(targetMarker);
